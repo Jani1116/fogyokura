@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fogyókúra Elite 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { 
+            --bg: #000000; --glass: rgba(28, 28, 30, 0.8);
+            --border: rgba(255, 255, 255, 0.1); --accent: #0a84ff;
+            --text: #ffffff; --success: #30d158; --red: #ff453a;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .container { max-width: 450px; margin: auto; background: var(--glass); backdrop-filter: blur(10px); padding: 20px; border-radius: 30px; border: 1px solid var(--border); }
+        h1 { font-size: 28px; text-align: center; margin-bottom: 20px; font-weight: 800; }
+        .input-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; margin-bottom: 10px; }
+        label { display: block; font-size: 12px; color: #8e8e93; text-transform: uppercase; margin-bottom: 5px; }
+        input { width: 100%; background: none; border: none; color: white; font-size: 20px; font-weight: 700; outline: none; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 18px; border-radius: 20px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+        .stats-box { margin-top: 20px; padding: 15px; background: rgba(10, 132, 255, 0.1); border-radius: 20px; border: 1px solid rgba(10, 132, 255, 0.2); }
+        .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 100; padding: 20px; overflow-y: auto; }
+        canvas { margin-top: 20px; max-height: 250px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <h1>Fogyókúra Elite</h1>
+    
+    <div class="input-card"><label>Reggeli súly (kg)</label><input type="number" id="weight" step="0.1" placeholder="0.0"></div>
+    
+    <div class="grid">
+        <div class="input-card"><label>Bevitt kcal</label><input type="number" id="kcal" placeholder="0"></div>
+        <div class="input-card"><label>Lépésszám</label><input type="number" id="steps" placeholder="0"></div>
+    </div>
+
+    <div class="grid">
+        <div class="input-card"><label>Esti súly (kg)</label><input type="number" id="weight_evening" step="0.1" placeholder="0.0"></div>
+        <div class="input-card"><label>Víz (liter)</label><input type="number" id="water" step="0.1" placeholder="0"></div>
+    </div>
+
+    <div id="quick-stats" class="stats-box" style="display:none">
+        <div style="display:flex; justify-content: space-between;">
+            <span>Napi deficit:</span> <b id="res-deficit" style="color:var(--success)">0 kcal</b>
+        </div>
+    </div>
+
+    <button class="main-btn" onclick="saveData()">ADATOK RÖGZÍTÉSE</button>
+    <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">HALADÁS MEGTEKINTÉSE</button>
+</div>
+
+<div id="chart-modal" class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center">
+        <h2>Statisztika</h2>
+        <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px">✕</button>
+    </div>
+    <canvas id="weightChart"></canvas>
+    <div id="summary" class="stats-box"></div>
+    <button class="main-btn" onclick="closeModal()">Vissza</button>
+</div>
+
+<script>
+    // Konfiguráció
+    const USER_HEIGHT = 170;
+    const USER_AGE = 30; // Módosítsd az életkorodra!
+    const DB_URL = "IDE_MÁSOLD_A_FIREBASE_URL-ED"; 
+
+    async function saveData() {
+        const w = parseFloat(document.getElementById('weight').value);
+        const k = parseInt(document.getElementById('kcal').value) || 0;
+        const s = parseInt(document.getElementById('steps').value) || 0;
+        
+        if(!w) return alert("Súly kötelező!");
+
+        // Számítások
+        const bmr = (10 * w) + (6.25 * USER_HEIGHT) - (5 * USER_AGE) + 5;
+        const stepBurn = s * (w * 0.00055);
+        const deficit = (bmr + stepBurn) - k;
+
+        const entry = {
+            date: new Date().toISOString().split('T')[0],
+            weight: w,
+            kcal_in: k,
+            steps: s,
+            bmr: Math.round(bmr),
+            stepBurn: Math.round(stepBurn),
+            deficit: Math.round(deficit),
+            water: parseFloat(document.getElementById('water').value) || 0,
+            weight_evening: parseFloat(document.getElementById('weight_evening').value) || 0
+        };
+
+        // Firebase mentés (opcionális, most helyi tárolóba is teszi)
+        let history = JSON.parse(localStorage.getItem('diet_history') || "[]");
+        history.push(entry);
+        localStorage.setItem('diet_history', JSON.stringify(history));
+        
+        document.getElementById('quick-stats').style.display = 'block';
+        document.getElementById('res-deficit').innerText = entry.deficit + " kcal";
+        alert("Mentve!");
+    }
+
+    function openCharts() {
+        document.getElementById('chart-modal').style.display = 'block';
+        const history = JSON.parse(localStorage.getItem('diet_history') || "[]").slice(-7);
+        
+        const ctx = document.getElementById('weightChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: history.map(h => h.date.slice(5)),
+                datasets: [{
+                    label: 'Súly (kg)',
+                    data: history.map(h => h.weight),
+                    borderColor: '#0a84ff',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(10, 132, 255, 0.1)'
+                }]
+            },
+            options: { plugins: { legend: { display: false } } }
+        });
+
+        const avgDeficit = history.reduce((acc, curr) => acc + curr.deficit, 0) / (history.length || 1);
+        document.getElementById('summary').innerHTML = `
+            <small>Heti átlag deficit:</small><br><b>${Math.round(avgDeficit)} kcal/nap</b><br><br>
+            <small>Becsült fogyás:</small><br><b>${(avgDeficit * 7 / 7700).toFixed(2)} kg / hét</b>
+        `;
+    }
+
+    function closeModal() { document.getElementById('chart-modal').style.display = 'none'; }
+</script>
+</body>
+</html>
