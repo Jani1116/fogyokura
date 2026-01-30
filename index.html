@@ -64,17 +64,16 @@
     </div>
     <canvas id="weightChart"></canvas>
     <div id="summary" class="stats-box"></div>
-    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">ÖSSZES ADAT EXPORTÁLÁSA (EXCEL)</button>
+    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">ÖSSZES ADAT EXPORT (CSV/EXCEL)</button>
     <button class="main-btn" onclick="closeModal()">Vissza</button>
 </div>
 
 <script>
-    // Konfiguráció
     const USER_HEIGHT = 170;
     const BIRTH_DATE = new Date('1985-11-16');
-    const FIREBASE_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.io/diet_data.json";
+    // A diet_tracker mappába mentjük, hogy ne keveredjen a többi adatoddal
+    const FIREBASE_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.io/diet_tracker.json";
 
-    // Mai dátum beállítása alapértelmezettnek
     document.getElementById('date').valueAsDate = new Date();
 
     function calculateAge() {
@@ -104,62 +103,57 @@
         };
 
         try {
-            // Mentés Firebase-be
             await fetch(FIREBASE_URL, {
                 method: 'POST',
                 body: JSON.stringify(entry)
             });
             
-            // Helyi mentés biztonsági másolatként
-            let history = JSON.parse(localStorage.getItem('diet_history') || "[]");
-            history.push(entry);
-            localStorage.setItem('diet_history', JSON.stringify(history));
-            
             document.getElementById('quick-stats').style.display = 'block';
             document.getElementById('res-deficit').innerText = entry.deficit + " kcal";
-            alert("Adatok sikeresen mentve!");
+            alert("Sikeresen mentve!");
         } catch (e) {
-            alert("Hiba a mentés során! Ellenőrizd az internetet.");
+            alert("Hiba! Ellenőrizd a kapcsolatot.");
         }
     }
 
     async function openCharts() {
         document.getElementById('chart-modal').style.display = 'block';
-        
-        // Adatok lekérése Firebase-ből
-        const response = await fetch(FIREBASE_URL);
-        const data = await response.json();
-        const history = data ? Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date)) : [];
-        
-        const last7Days = history.slice(-7);
-        
-        const ctx = document.getElementById('weightChart').getContext('2d');
-        if(window.myChart) window.myChart.destroy();
-        
-        window.myChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: last7Days.map(h => h.date.slice(5)),
-                datasets: [{
-                    label: 'Súly (kg)',
-                    data: last7Days.map(h => h.weight),
-                    borderColor: '#0a84ff',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    pointBackgroundColor: '#0a84ff'
-                }]
-            },
-            options: { 
-                scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' } } },
-                plugins: { legend: { display: false } } 
-            }
-        });
+        try {
+            const response = await fetch(FIREBASE_URL);
+            const data = await response.json();
+            const history = data ? Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date)) : [];
+            const last7Days = history.slice(-7);
+            
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            if(window.myChart) window.myChart.destroy();
+            
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7Days.map(h => h.date.slice(5)),
+                    datasets: [{
+                        label: 'Súly (kg)',
+                        data: last7Days.map(h => h.weight),
+                        borderColor: '#0a84ff',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointBackgroundColor: '#0a84ff'
+                    }]
+                },
+                options: { 
+                    scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' } } },
+                    plugins: { legend: { display: false } } 
+                }
+            });
 
-        const avgDeficit = last7Days.reduce((acc, curr) => acc + curr.deficit, 0) / (last7Days.length || 1);
-        document.getElementById('summary').innerHTML = `
-            <small>Heti átlag deficit:</small><br><b>${Math.round(avgDeficit)} kcal/nap</b><br><br>
-            <small>Várható fogyás:</small><br><b>${(avgDeficit * 7 / 7700).toFixed(2)} kg / hét</b>
-        `;
+            const avgDeficit = last7Days.reduce((acc, curr) => acc + curr.deficit, 0) / (last7Days.length || 1);
+            document.getElementById('summary').innerHTML = `
+                <small>Átlag deficit (7 nap):</small><br><b>${Math.round(avgDeficit)} kcal/nap</b><br><br>
+                <small>Várható fogyás:</small><br><b>${(avgDeficit * 7 / 7700).toFixed(2)} kg / hét</b>
+            `;
+        } catch (e) {
+            alert("Nincs még adat a felhőben.");
+        }
     }
 
     async function exportToExcel() {
@@ -167,15 +161,16 @@
         const data = await response.json();
         const history = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
         
-        let csv = "Datum,Reggeli Suly,Esti Suly,Bevitt Kcal,Lepesszam,BMR,Lepes Egetes,Deficit,Viz (L)\n";
+        // UTF-8 BOM és pontosvessző elválasztás a magyar Excelhez
+        let csv = "\uFEFFDatum;Reggeli Suly;Esti Suly;Bevitt Kcal;Lepesszam;BMR;Lepes Egetes;Deficit;Viz\n";
         history.forEach(h => {
-            csv += `${h.date},${h.weight},${h.weight_evening},${h.kcal_in},${h.steps},${h.bmr},${h.stepBurn},${h.deficit},${h.water}\n`;
+            csv += `${h.date};${h.weight};${h.weight_evening};${h.kcal_in};${h.steps};${h.bmr};${h.stepBurn};${h.deficit};${h.water}\n`;
         });
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", `fogyokura_teljes_adatbazis.csv`);
+        link.setAttribute("download", `fogyokura_teljes_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
