@@ -13,7 +13,7 @@
         }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .container { max-width: 450px; margin: auto; background: var(--glass); backdrop-filter: blur(10px); padding: 20px; border-radius: 30px; border: 1px solid var(--border); }
-        h1 { font-size: 24px; text-align: center; margin-bottom: 20px; font-weight: 800; color: var(--accent); }
+        h1 { font-size: 22px; text-align: center; margin-bottom: 20px; font-weight: 800; color: var(--accent); letter-spacing: 1px; }
         .input-card { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 18px; margin-bottom: 10px; border: 1px solid var(--border); }
         label { display: block; font-size: 11px; color: #8e8e93; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
         input { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; }
@@ -28,7 +28,7 @@
 <body>
 
 <div class="container" id="app">
-    <h1>FOGYÓKÚRA ELITE</h1>
+    <h1>FOGYÓKÚRA ELITE 2026</h1>
     
     <div class="input-card">
         <label>Dátum</label>
@@ -64,16 +64,17 @@
     </div>
     <canvas id="weightChart"></canvas>
     <div id="summary" class="stats-box"></div>
-    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">ÖSSZES ADAT EXPORT (CSV/EXCEL)</button>
+    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">ÖSSZES ADAT EXPORT (CSV)</button>
     <button class="main-btn" onclick="closeModal()">Vissza</button>
 </div>
 
 <script>
     const USER_HEIGHT = 170;
     const BIRTH_DATE = new Date('1985-11-16');
-    // A diet_tracker mappába mentjük, hogy ne keveredjen a többi adatoddal
-    const FIREBASE_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.io/diet_tracker.json";
+    // Az URL végén NINCS .json, mert a dátumot dinamikusan fűzzük hozzá
+    const BASE_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.io/diet_tracker";
 
+    // Alapértelmezett dátum a mai nap
     document.getElementById('date').valueAsDate = new Date();
 
     function calculateAge() {
@@ -83,45 +84,60 @@
 
     async function saveData() {
         const date = document.getElementById('date').value;
-        const w = parseFloat(document.getElementById('weight').value);
-        const w_e = parseFloat(document.getElementById('weight_evening').value) || 0;
-        const k = parseInt(document.getElementById('kcal').value) || 0;
-        const s = parseInt(document.getElementById('steps').value) || 0;
-        const water = parseFloat(document.getElementById('water').value) || 0;
-        
-        if(!w || !date) return alert("Súly és dátum kötelező!");
+        if(!date) return alert("Dátum megadása kötelező!");
 
-        const age = calculateAge();
-        const bmr = (10 * w) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
-        const stepBurn = s * (w * 0.00055);
-        const deficit = (bmr + stepBurn) - k;
+        const w = document.getElementById('weight').value;
+        const w_e = document.getElementById('weight_evening').value;
+        const k = document.getElementById('kcal').value;
+        const s = document.getElementById('steps').value;
+        const water = document.getElementById('water').value;
 
-        const entry = {
-            date, weight: w, weight_evening: w_e, kcal_in: k, steps: s,
-            bmr: Math.round(bmr), stepBurn: Math.round(stepBurn),
-            deficit: Math.round(deficit), water: water
-        };
+        // Csak azokat küldjük el, amik ki vannak töltve (PATCH nem törli a többit)
+        let updateData = { date: date };
+        if(w !== "") updateData.weight = parseFloat(w);
+        if(w_e !== "") updateData.weight_evening = parseFloat(w_e);
+        if(k !== "") updateData.kcal_in = parseInt(k);
+        if(s !== "") updateData.steps = parseInt(s);
+        if(water !== "") updateData.water = parseFloat(water);
+
+        // Deficit számítás, ha van súly és kcal
+        if(w !== "" && k !== "") {
+            const age = calculateAge();
+            const weightVal = parseFloat(w);
+            const bmr = (10 * weightVal) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
+            const stepBurn = (parseInt(s) || 0) * (weightVal * 0.00055);
+            updateData.bmr = Math.round(bmr);
+            updateData.stepBurn = Math.round(stepBurn);
+            updateData.deficit = Math.round((bmr + stepBurn) - parseInt(k));
+            
+            document.getElementById('res-deficit').innerText = updateData.deficit + " kcal";
+            document.getElementById('quick-stats').style.display = 'block';
+        }
 
         try {
-            await fetch(FIREBASE_URL, {
-                method: 'POST',
-                body: JSON.stringify(entry)
+            // PATCH metódus: frissíti a meglévő napot, vagy létrehozza ha nincs
+            const response = await fetch(`${BASE_URL}/${date}.json`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
             });
             
-            document.getElementById('quick-stats').style.display = 'block';
-            document.getElementById('res-deficit').innerText = entry.deficit + " kcal";
-            alert("Sikeresen mentve!");
+            if(!response.ok) throw new Error("Hálózati hiba");
+            alert("Adatok sikeresen frissítve!");
         } catch (e) {
-            alert("Hiba! Ellenőrizd a kapcsolatot.");
+            alert("Hiba! Ellenőrizd a Firebase 'Rules' beállítását (legyen true az írás/olvasás).");
+            console.error(e);
         }
     }
 
     async function openCharts() {
         document.getElementById('chart-modal').style.display = 'block';
         try {
-            const response = await fetch(FIREBASE_URL);
+            const response = await fetch(`${BASE_URL}.json`);
             const data = await response.json();
-            const history = data ? Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date)) : [];
+            if(!data) return alert("Még nincs mentett adatod.");
+
+            const history = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
             const last7Days = history.slice(-7);
             
             const ctx = document.getElementById('weightChart').getContext('2d');
@@ -130,53 +146,64 @@
             window.myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: last7Days.map(h => h.date.slice(5)),
+                    labels: last7Days.map(h => h.date.split('-').slice(1).join('.')),
                     datasets: [{
                         label: 'Súly (kg)',
                         data: last7Days.map(h => h.weight),
                         borderColor: '#0a84ff',
+                        backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                        fill: true,
                         borderWidth: 3,
-                        tension: 0.4,
-                        pointBackgroundColor: '#0a84ff'
+                        tension: 0.4
                     }]
                 },
                 options: { 
-                    scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' } } },
+                    responsive: true,
+                    scales: { 
+                        y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#8e8e93' } },
+                        x: { ticks: { color: '#8e8e93' } }
+                    },
                     plugins: { legend: { display: false } } 
                 }
             });
 
-            const avgDeficit = last7Days.reduce((acc, curr) => acc + curr.deficit, 0) / (last7Days.length || 1);
+            const deficits = last7Days.filter(h => h.deficit).map(h => h.deficit);
+            const avgDeficit = deficits.length ? deficits.reduce((a,b) => a+b, 0) / deficits.length : 0;
+            
             document.getElementById('summary').innerHTML = `
-                <small>Átlag deficit (7 nap):</small><br><b>${Math.round(avgDeficit)} kcal/nap</b><br><br>
-                <small>Várható fogyás:</small><br><b>${(avgDeficit * 7 / 7700).toFixed(2)} kg / hét</b>
+                <div style="margin-bottom:10px"><small>Átlag deficit (utolsó 7 adat):</small><br><b>${Math.round(avgDeficit)} kcal/nap</b></div>
+                <div><small>Várható fogyás:</small><br><b style="color:var(--success)">${(avgDeficit * 7 / 7700).toFixed(2)} kg / hét</b></div>
             `;
         } catch (e) {
-            alert("Nincs még adat a felhőben.");
+            console.error(e);
         }
     }
 
     async function exportToExcel() {
-        const response = await fetch(FIREBASE_URL);
-        const data = await response.json();
-        const history = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
-        
-        // UTF-8 BOM és pontosvessző elválasztás a magyar Excelhez
-        let csv = "\uFEFFDatum;Reggeli Suly;Esti Suly;Bevitt Kcal;Lepesszam;BMR;Lepes Egetes;Deficit;Viz\n";
-        history.forEach(h => {
-            csv += `${h.date};${h.weight};${h.weight_evening};${h.kcal_in};${h.steps};${h.bmr};${h.stepBurn};${h.deficit};${h.water}\n`;
-        });
+        try {
+            const response = await fetch(`${BASE_URL}.json`);
+            const data = await response.json();
+            const history = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
+            
+            let csv = "\uFEFFDatum;Reggeli Suly;Esti Suly;Bevitt Kcal;Lepesszam;BMR;Lepes Egetes;Deficit;Viz\n";
+            history.forEach(h => {
+                csv += `${h.date};${h.weight || ''};${h.weight_evening || ''};${h.kcal_in || ''};${h.steps || ''};${h.bmr || ''};${h.stepBurn || ''};${h.deficit || ''};${h.water || ''}\n`;
+            });
 
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", `fogyokura_teljes_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `fogyokura_teljes_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (e) {
+            alert("Hiba az exportálás során.");
+        }
     }
 
     function closeModal() { document.getElementById('chart-modal').style.display = 'none'; }
 </script>
+
 </body>
 </html>
