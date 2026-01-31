@@ -9,31 +9,38 @@
         :root { 
             --bg: #000000; --glass: rgba(28, 28, 30, 0.8);
             --border: rgba(255, 255, 255, 0.1); --accent: #0a84ff;
-            --text: #ffffff; --success: #30d158; --red: #ff453a;
+            --text: #ffffff; --success: #30d158; --gray: #8e8e93;
         }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .container { max-width: 450px; margin: auto; background: var(--glass); backdrop-filter: blur(10px); padding: 20px; border-radius: 30px; border: 1px solid var(--border); }
+        .container { max-width: 450px; margin: auto; background: var(--glass); backdrop-filter: blur(10px); padding: 20px; border-radius: 30px; border: 1px solid var(--border); min-height: 80vh; display: flex; flex-direction: column; }
         h1 { font-size: 22px; text-align: center; margin-bottom: 20px; font-weight: 800; color: var(--accent); letter-spacing: 1px; }
         .input-card { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 18px; margin-bottom: 10px; border: 1px solid var(--border); }
-        label { display: block; font-size: 11px; color: #8e8e93; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
-        input { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; }
+        label { display: block; font-size: 11px; color: var(--gray); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+        input { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; box-sizing: border-box; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 18px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: 0.2s; }
         .main-btn:active { transform: scale(0.98); opacity: 0.8; }
         .stats-box { margin-top: 15px; padding: 15px; background: rgba(10, 132, 255, 0.1); border-radius: 20px; border: 1px solid rgba(10, 132, 255, 0.2); }
         .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 100; padding: 20px; overflow-y: auto; }
-        canvas { margin-top: 10px; max-height: 220px; }
+        #loading-overlay { position: fixed; inset: 0; background: black; z-index: 3000; display: none; align-items: center; justify-content: center; color: var(--accent); font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="container" id="app">
-    <h1>FOGYÓKÚRA ELITE 2026</h1>
+<div id="loading-overlay">SZINKRONIZÁLÁS...</div>
+
+<div id="login-screen" class="container" style="justify-content: center;">
+    <h1 style="color: var(--accent);">FOGYÓKÚRA ELITE</h1>
+    <div class="input-card"><label>Név</label><input type="text" id="login-user" placeholder="Név"></div>
+    <div class="input-card"><label>Jelszó</label><input type="password" id="login-pass" placeholder="Jelszó"></div>
+    <button class="main-btn" onclick="handleLogin()">BELÉPÉS</button>
+</div>
+
+<div id="app-content" class="container" style="display:none;">
+    <div id="user-display" style="font-size: 10px; color: var(--accent); text-align: center; margin-bottom: 10px; letter-spacing: 2px; font-weight: bold;"></div>
+    <h1>NAPI RÖGZÍTÉS</h1>
     
-    <div class="input-card">
-        <label>Dátum</label>
-        <input type="date" id="date">
-    </div>
+    <div class="input-card"><label>Dátum</label><input type="date" id="date"></div>
 
     <div class="grid">
         <div class="input-card"><label>Reggeli súly (kg)</label><input type="number" id="weight" step="0.1" placeholder="0.0"></div>
@@ -53,157 +60,155 @@
         </div>
     </div>
 
-    <button class="main-btn" onclick="saveData()">ADATOK RÖGZÍTÉSE</button>
+    <button class="main-btn" onclick="saveData()">ADATOK MENTÉSE</button>
     <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">HALADÁS ÉS EXPORT</button>
+    <button onclick="logout()" style="background:none; border:none; color:var(--gray); width:100%; font-size:10px; margin-top: 20px; opacity: 0.5;">Kijelentkezés</button>
 </div>
 
 <div id="chart-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center">
-        <h2 style="margin:0">Statisztika (7 nap)</h2>
+        <h2 style="margin:0">Statisztika</h2>
         <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:28px">✕</button>
     </div>
-    <canvas id="weightChart"></canvas>
+    <canvas id="weightChart" style="margin-top: 20px;"></canvas>
     <div id="summary" class="stats-box"></div>
-    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">ÖSSZES ADAT EXPORT (CSV)</button>
-    <button class="main-btn" onclick="closeModal()">Vissza</button>
+    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">ADATOK EXPORTÁLÁSA (CSV)</button>
+    <button class="main-btn" onclick="closeModal()">VISSZA</button>
 </div>
 
 <script>
     const USER_HEIGHT = 170;
     const BIRTH_DATE = new Date('1985-11-16');
-    // Az URL végén NINCS .json, mert a dátumot dinamikusan fűzzük hozzá
-    const BASE_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.io/diet_tracker";
+    const DB_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.com/";
+    let currentUser = JSON.parse(localStorage.getItem('diet_session'));
 
-    // Alapértelmezett dátum a mai nap
     document.getElementById('date').valueAsDate = new Date();
 
-    function calculateAge() {
-        const diff = Date.now() - BIRTH_DATE.getTime();
-        return Math.abs(new Date(diff).getUTCFullYear() - 1970);
+    function showLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
+
+    async function handleLogin() {
+        const u = document.getElementById('login-user').value.trim();
+        const p = document.getElementById('login-pass').value.trim();
+        if(!u || !p) return;
+        showLoading(true);
+        try {
+            const res = await fetch(`${DB_URL}shopping_users/${u}.json`);
+            let stored = await res.json();
+            if (stored && String(stored).replace(/"/g, '') === String(p)) {
+                currentUser = { name: u };
+                localStorage.setItem('diet_session', JSON.stringify(currentUser));
+                initApp();
+            } else { alert("Hibás jelszó!"); }
+        } catch (e) { alert("Hiba a belépésnél!"); }
+        showLoading(false);
+    }
+
+    function initApp() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-content').style.display = 'flex';
+        document.getElementById('user-display').innerText = currentUser.name.toUpperCase();
     }
 
     async function saveData() {
         const date = document.getElementById('date').value;
-        if(!date) return alert("Dátum megadása kötelező!");
+        if(!date) return alert("Dátum kötelező!");
 
-        const w = document.getElementById('weight').value;
-        const w_e = document.getElementById('weight_evening').value;
-        const k = document.getElementById('kcal').value;
-        const s = document.getElementById('steps').value;
-        const water = document.getElementById('water').value;
+        showLoading(true);
+        const weightVal = document.getElementById('weight').value;
+        const kcalVal = document.getElementById('kcal').value;
 
-        // Csak azokat küldjük el, amik ki vannak töltve (PATCH nem törli a többit)
-        let updateData = { date: date };
-        if(w !== "") updateData.weight = parseFloat(w);
-        if(w_e !== "") updateData.weight_evening = parseFloat(w_e);
-        if(k !== "") updateData.kcal_in = parseInt(k);
-        if(s !== "") updateData.steps = parseInt(s);
-        if(water !== "") updateData.water = parseFloat(water);
+        let updateData = {
+            date: date,
+            weight: weightVal ? parseFloat(weightVal) : null,
+            weight_evening: document.getElementById('weight_evening').value ? parseFloat(document.getElementById('weight_evening').value) : null,
+            kcal_in: kcalVal ? parseInt(kcalVal) : null,
+            steps: document.getElementById('steps').value ? parseInt(document.getElementById('steps').value) : null,
+            water: document.getElementById('water').value ? parseFloat(document.getElementById('water').value) : null
+        };
 
-        // Deficit számítás, ha van súly és kcal
-        if(w !== "" && k !== "") {
-            const age = calculateAge();
-            const weightVal = parseFloat(w);
-            const bmr = (10 * weightVal) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
-            const stepBurn = (parseInt(s) || 0) * (weightVal * 0.00055);
-            updateData.bmr = Math.round(bmr);
-            updateData.stepBurn = Math.round(stepBurn);
-            updateData.deficit = Math.round((bmr + stepBurn) - parseInt(k));
-            
-            document.getElementById('res-deficit').innerText = updateData.deficit + " kcal";
+        // Csak a kitöltött mezőket küldjük (PATCH)
+        const cleanData = Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== null));
+
+        // Deficit számítás
+        if(cleanData.weight && cleanData.kcal_in) {
+            const age = Math.abs(new Date(Date.now() - BIRTH_DATE.getTime()).getUTCFullYear() - 1970);
+            const bmr = (10 * cleanData.weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
+            const stepBurn = (cleanData.steps || 0) * (cleanData.weight * 0.00055);
+            cleanData.deficit = Math.round((bmr + stepBurn) - cleanData.kcal_in);
+            document.getElementById('res-deficit').innerText = cleanData.deficit + " kcal";
             document.getElementById('quick-stats').style.display = 'block';
         }
 
         try {
-            // PATCH metódus: frissíti a meglévő napot, vagy létrehozza ha nincs
-            const response = await fetch(`${BASE_URL}/${date}.json`, {
+            await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
+                body: JSON.stringify(cleanData)
             });
-            
-            if(!response.ok) throw new Error("Hálózati hiba");
-            alert("Adatok sikeresen frissítve!");
+            alert("Adatok sikeresen mentve!");
         } catch (e) {
-            alert("Hiba! Ellenőrizd a Firebase 'Rules' beállítását (legyen true az írás/olvasás).");
-            console.error(e);
+            alert("Hiba a mentés során!");
         }
+        showLoading(false);
     }
 
     async function openCharts() {
         document.getElementById('chart-modal').style.display = 'block';
+        showLoading(true);
         try {
-            const response = await fetch(`${BASE_URL}.json`);
+            const response = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
             const data = await response.json();
-            if(!data) return alert("Még nincs mentett adatod.");
+            if(!data) { showLoading(false); return; }
 
             const history = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
-            const last7Days = history.slice(-7);
+            const last7 = history.slice(-7);
             
             const ctx = document.getElementById('weightChart').getContext('2d');
             if(window.myChart) window.myChart.destroy();
-            
             window.myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: last7Days.map(h => h.date.split('-').slice(1).join('.')),
+                    labels: last7.map(h => h.date.slice(5)),
                     datasets: [{
-                        label: 'Súly (kg)',
-                        data: last7Days.map(h => h.weight),
+                        label: 'Súly',
+                        data: last7.map(h => h.weight),
                         borderColor: '#0a84ff',
-                        backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                        tension: 0.4,
                         fill: true,
-                        borderWidth: 3,
-                        tension: 0.4
+                        backgroundColor: 'rgba(10, 132, 255, 0.1)'
                     }]
                 },
-                options: { 
-                    responsive: true,
-                    scales: { 
-                        y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#8e8e93' } },
-                        x: { ticks: { color: '#8e8e93' } }
-                    },
-                    plugins: { legend: { display: false } } 
-                }
+                options: { scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' } } } }
             });
 
-            const deficits = last7Days.filter(h => h.deficit).map(h => h.deficit);
-            const avgDeficit = deficits.length ? deficits.reduce((a,b) => a+b, 0) / deficits.length : 0;
-            
+            const avgDeficit = last7.reduce((acc, curr) => acc + (curr.deficit || 0), 0) / last7.length;
             document.getElementById('summary').innerHTML = `
-                <div style="margin-bottom:10px"><small>Átlag deficit (utolsó 7 adat):</small><br><b>${Math.round(avgDeficit)} kcal/nap</b></div>
-                <div><small>Várható fogyás:</small><br><b style="color:var(--success)">${(avgDeficit * 7 / 7700).toFixed(2)} kg / hét</b></div>
+                <small>Heti átlag deficit:</small><br><b>${Math.round(avgDeficit)} kcal/nap</b><br><br>
+                <small>Várható fogyás:</small><br><b style="color:var(--success)">${(avgDeficit * 7 / 7700).toFixed(2)} kg / hét</b>
             `;
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
+        showLoading(false);
     }
 
     async function exportToExcel() {
-        try {
-            const response = await fetch(`${BASE_URL}.json`);
-            const data = await response.json();
-            const history = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
-            
-            let csv = "\uFEFFDatum;Reggeli Suly;Esti Suly;Bevitt Kcal;Lepesszam;BMR;Lepes Egetes;Deficit;Viz\n";
-            history.forEach(h => {
-                csv += `${h.date};${h.weight || ''};${h.weight_evening || ''};${h.kcal_in || ''};${h.steps || ''};${h.bmr || ''};${h.stepBurn || ''};${h.deficit || ''};${h.water || ''}\n`;
-            });
+        const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
+        const data = await res.json();
+        const history = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
+        
+        let csv = "\uFEFFDatum;Reggeli Suly;Esti Suly;Kcal;Lepes;Deficit;Viz\n";
+        history.forEach(h => {
+            csv += `${h.date};${h.weight || ''};${h.weight_evening || ''};${h.kcal_in || ''};${h.steps || ''};${h.deficit || ''};${h.water || ''}\n`;
+        });
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", `fogyokura_teljes_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (e) {
-            alert("Hiba az exportálás során.");
-        }
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+        link.download = `fogyokura_export_${currentUser.name}.csv`;
+        link.click();
     }
 
+    function logout() { localStorage.removeItem('diet_session'); location.reload(); }
     function closeModal() { document.getElementById('chart-modal').style.display = 'none'; }
-</script>
 
+    if(currentUser) initApp();
+</script>
 </body>
 </html>
