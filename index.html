@@ -234,7 +234,7 @@
         } catch (e) {
             saveBtn.classList.add('error');
             saveBtn.innerText = "❌ SIKERTELEN!";
-            alert("A mentés megszakadt! Ellenőrizd az internetet a Note 20-asodon.");
+            alert("Adat nincs mentve! Nincs internet!.");
             setTimeout(() => {
                 saveBtn.classList.remove('error');
                 saveBtn.innerText = originalText;
