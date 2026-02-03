@@ -17,7 +17,8 @@
         h1 { font-size: 22px; text-align: center; margin-bottom: 20px; font-weight: 800; color: var(--accent); letter-spacing: 1px; }
         .input-card { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 18px; margin-bottom: 12px; border: 1px solid var(--border); position: relative; }
         label { display: block; font-size: 11px; color: var(--gray); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
-        input { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; box-sizing: border-box; }
+        input, select { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; box-sizing: border-box; }
+        select option { background: #1c1c1e; color: white; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 18px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: 0.2s; }
         .main-btn:active { transform: scale(0.98); opacity: 0.8; }
@@ -29,6 +30,9 @@
         #loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; color: var(--accent); font-weight: bold; font-size: 14px; letter-spacing: 2px; }
         .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 8px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--water); width: 0%; transition: 0.3s; }
+        .view-selector { display: flex; gap: 5px; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 12px; }
+        .view-btn { flex: 1; border: none; background: none; color: var(--gray); padding: 8px; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 8px; }
+        .view-btn.active { background: var(--accent); color: white; }
     </style>
 </head>
 <body>
@@ -45,54 +49,41 @@
 <div id="app-content" class="container" style="display:none;">
     <div id="user-display" style="font-size: 10px; color: var(--accent); text-align: center; margin-bottom: 10px; letter-spacing: 2px; font-weight: bold;"></div>
     
-    <div class="input-card">
-        <label>Dátum</label>
-        <input type="date" id="date">
-    </div>
+    <div class="input-card"><label>Dátum</label><input type="date" id="date"></div>
 
     <div class="grid">
-        <div class="input-card">
-            <label>Reggeli súly (kg)</label>
-            <input type="number" id="weight" step="0.1" placeholder="0.0">
-        </div>
-        <div class="input-card">
-            <label>Esti súly (kg)</label>
-            <input type="number" id="weight_evening" step="0.1" placeholder="0.0">
-        </div>
+        <div class="input-card"><label>Reggeli súly (kg)</label><input type="number" id="weight" step="0.1"></div>
+        <div class="input-card"><label>Esti súly (kg)</label><input type="number" id="weight_evening" step="0.1"></div>
     </div>
     
     <div class="input-card">
         <span id="kcal-info" class="info-tag">Mai eddigi: 0 kcal</span>
-        <label>Új kalória bevitel (+)</label>
-        <input type="number" id="kcal" placeholder="Mit ettél?">
+        <label>Új bevitel (+)</label><input type="number" id="kcal">
     </div>
 
     <div class="grid">
-        <div class="input-card">
-            <label>Lépésszám</label>
-            <input type="number" id="steps" placeholder="0">
-        </div>
+        <div class="input-card"><label>Lépés</label><input type="number" id="steps"></div>
         <div class="input-card">
             <span id="water-info" class="info-tag">Víz: 0 / 4.8 L</span>
-            <label>Bevitel (L)</label>
-            <input type="number" id="water" step="0.1" placeholder="+ Liter">
+            <label>Liter</label>
+            <input type="number" id="water" step="0.1">
             <div class="progress-bar"><div id="water-fill" class="progress-fill"></div></div>
             <div class="water-btns">
-                <button class="btn-sm" onclick="addWater(0.25)">+2.5dl</button>
-                <button class="btn-sm" onclick="addWater(0.5)">+5dl</button>
+                <button class="btn-sm" onclick="addWater(0.25)">+2.5</button>
+                <button class="btn-sm" onclick="addWater(0.5)">+5</button>
             </div>
         </div>
     </div>
 
     <div id="quick-stats" class="stats-box" style="display:none">
-        <div style="display:flex; justify-content: space-between; align-items: center;">
-            <span>Napi deficit:</span> <b id="res-deficit" style="font-size: 20px;">0 kcal</b>
+        <div style="display:flex; justify-content: space-between;">
+            <span>Napi deficit:</span> <b id="res-deficit">0 kcal</b>
         </div>
     </div>
 
-    <button class="main-btn" onclick="saveData()">ADATOK MENTÉSE</button>
-    <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">HELI STATISZTIKA</button>
-    <button onclick="logout()" style="background:none; border:none; color:var(--gray); width:100%; font-size:10px; margin-top: 25px; opacity: 0.5;">Kijelentkezés</button>
+    <button class="main-btn" onclick="saveData()">MENTÉS</button>
+    <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">STATISZTIKA</button>
+    <button onclick="logout()" style="background:none; border:none; color:var(--gray); width:100%; font-size:10px; margin-top: 25px;">Kijelentkezés</button>
 </div>
 
 <div id="chart-modal" class="modal">
@@ -100,25 +91,41 @@
         <h2 style="margin:0">Haladás</h2>
         <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:28px">✕</button>
     </div>
-    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; margin-bottom:15px;">
+
+    <div class="view-selector">
+        <button class="view-btn active" id="btn-7" onclick="changeView('7')">7 NAP</button>
+        <button class="view-btn" id="btn-month" onclick="changeView('month')">HÓNAP</button>
+        <button class="view-btn" id="btn-all" onclick="changeView('all')">ÖSSZES</button>
+    </div>
+
+    <div id="month-picker-container" class="input-card" style="display:none; margin-bottom: 15px;">
+        <label>Válassz hónapot</label>
+        <input type="month" id="month-picker" onchange="updateChartWithData()">
+    </div>
+
+    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 20px;">
         <canvas id="weightChart"></canvas>
     </div>
+    
     <div id="summary" class="stats-box"></div>
-    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">EXPORTÁLÁS (CSV)</button>
-    <button class="main-btn" onclick="closeModal()">VISSZA</button>
+    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">CSV EXPORT</button>
 </div>
 
 <script>
+    // Alapbeállítások és szinkronizáció marad...
     const USER_HEIGHT = 170;
     const BIRTH_DATE = new Date('1985-11-16');
     const DB_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.com/";
     let currentUser = JSON.parse(localStorage.getItem('diet_session'));
     let currentDayData = {};
+    let fullHistory = [];
+    let currentView = '7';
 
     document.getElementById('date').valueAsDate = new Date();
+    document.getElementById('month-picker').value = new Date().toISOString().slice(0, 7);
 
+    // Függvények (Login, Load, Save...)
     function showLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
-
     async function handleLogin() {
         const u = document.getElementById('login-user').value.trim();
         const p = document.getElementById('login-pass').value.trim();
@@ -131,18 +138,16 @@
                 currentUser = { name: u };
                 localStorage.setItem('diet_session', JSON.stringify(currentUser));
                 initApp();
-            } else { alert("Hibás jelszó!"); }
-        } catch (e) { alert("Hiba!"); }
+            } else { alert("Hiba!"); }
+        } catch (e) { }
         showLoading(false);
     }
-
     function initApp() {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-content').style.display = 'flex';
         document.getElementById('user-display').innerText = currentUser.name.toUpperCase();
         loadDailyData();
     }
-
     async function loadDailyData() {
         const date = document.getElementById('date').value;
         if(!currentUser || !date) return;
@@ -150,129 +155,126 @@
         try {
             const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`);
             currentDayData = await res.json() || {};
-            
             document.getElementById('weight').value = currentDayData.weight || '';
             document.getElementById('weight_evening').value = currentDayData.weight_evening || '';
             document.getElementById('steps').value = currentDayData.steps || '';
             document.getElementById('kcal').value = '';
             document.getElementById('water').value = '';
-            
             document.getElementById('kcal-info').innerText = `Mai eddigi: ${currentDayData.kcal_in || 0} kcal`;
-            
-            // Víz cél és progress bar
-            const waterGoal = currentDayData.weight ? (currentDayData.weight * 0.04).toFixed(1) : 4.8;
-            const waterVal = currentDayData.water || 0;
-            document.getElementById('water-info').innerText = `Víz: ${waterVal} / ${waterGoal} L`;
-            document.getElementById('water-fill').style.width = Math.min((waterVal / waterGoal) * 100, 100) + "%";
-
+            const wGoal = currentDayData.weight ? (currentDayData.weight * 0.04).toFixed(1) : 4.8;
+            document.getElementById('water-info').innerText = `Víz: ${currentDayData.water || 0} / ${wGoal} L`;
+            document.getElementById('water-fill').style.width = Math.min(((currentDayData.water || 0) / wGoal) * 100, 100) + "%";
             if(currentDayData.deficit !== undefined) {
-                const defEl = document.getElementById('res-deficit');
-                defEl.innerText = currentDayData.deficit + " kcal";
-                defEl.style.color = currentDayData.deficit > 0 ? "var(--success)" : "var(--danger)";
+                document.getElementById('res-deficit').innerText = currentDayData.deficit + " kcal";
+                document.getElementById('res-deficit').style.color = currentDayData.deficit > 0 ? "var(--success)" : "var(--danger)";
                 document.getElementById('quick-stats').style.display = 'block';
-            } else {
-                document.getElementById('quick-stats').style.display = 'none';
-            }
-        } catch (e) { console.error(e); }
+            } else { document.getElementById('quick-stats').style.display = 'none'; }
+        } catch (e) { }
         showLoading(false);
     }
-
-    document.getElementById('date').addEventListener('change', loadDailyData);
-
     function addWater(val) {
         let current = parseFloat(document.getElementById('water').value) || 0;
         document.getElementById('water').value = (current + val).toFixed(2);
     }
-
     async function saveData() {
         const date = document.getElementById('date').value;
         showLoading(true);
-        
+        let up = { ...currentDayData, date: date };
         const wVal = document.getElementById('weight').value;
         const wEveVal = document.getElementById('weight_evening').value;
         const addKcal = document.getElementById('kcal').value;
         const sVal = document.getElementById('steps').value;
         const addWat = document.getElementById('water').value;
-
-        let up = { ...currentDayData, date: date };
-
         if(wVal) up.weight = parseFloat(wVal);
         if(wEveVal) up.weight_evening = parseFloat(wEveVal);
         if(sVal) up.steps = parseInt(sVal);
         if(addKcal) up.kcal_in = (currentDayData.kcal_in || 0) + parseInt(addKcal);
         if(addWat) up.water = (currentDayData.water || 0) + parseFloat(addWat);
-
         if(up.weight && up.kcal_in) {
             const age = Math.abs(new Date(Date.now() - BIRTH_DATE.getTime()).getUTCFullYear() - 1970);
             const bmr = (10 * up.weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
             const stepBurn = (up.steps || 0) * (up.weight * 0.00045); 
             up.deficit = Math.round((bmr + stepBurn) - up.kcal_in);
         }
-
         try {
-            await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, {
-                method: 'PATCH',
-                body: JSON.stringify(up)
-            });
+            await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { method: 'PATCH', body: JSON.stringify(up) });
             await loadDailyData();
-        } catch (e) { alert("Hiba!"); }
+        } catch (e) { }
         showLoading(false);
     }
 
+    // ÚJ STATISZTIKA LOGIKA
     async function openCharts() {
         document.getElementById('chart-modal').style.display = 'block';
         showLoading(true);
         try {
             const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
             const data = await res.json();
-            const history = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-7);
-            
-            const ctx = document.getElementById('weightChart').getContext('2d');
-            if(window.myChart) window.myChart.destroy();
-            window.myChart = new Chart(ctx, {
-                data: {
-                    labels: history.map(h => h.date.slice(5)),
-                    datasets: [
-                        {
-                            type: 'line',
-                            label: 'Súly',
-                            data: history.map(h => h.weight),
-                            borderColor: '#0a84ff',
-                            tension: 0.3,
-                            yAxisID: 'y'
-                        },
-                        {
-                            type: 'bar',
-                            label: 'Deficit',
-                            data: history.map(h => h.deficit),
-                            backgroundColor: history.map(h => (h.deficit > 0 ? 'rgba(48, 209, 88, 0.3)' : 'rgba(255, 69, 58, 0.3)')),
-                            yAxisID: 'y1'
-                        }
-                    ]
-                },
-                options: {
-                    scales: {
-                        y: { position: 'left', ticks: { color: '#8e8e93' } },
-                        y1: { position: 'right', grid: { display: false }, ticks: { display: false } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            const avgDef = history.reduce((a, b) => a + (b.deficit || 0), 0) / history.length;
-            document.getElementById('summary').innerHTML = `
-                <div style="font-size:12px; opacity:0.7">Heti átlag deficit:</div>
-                <div style="font-size:20px; font-weight:800; color:var(--accent)">${Math.round(avgDef)} kcal/nap</div>
-                <hr style="border:0; border-top:1px solid var(--border); margin:10px 0">
-                <div style="font-size:12px; opacity:0.7">Várható fogyás (heti):</div>
-                <div style="font-size:20px; font-weight:800; color:var(--success)">${(avgDef * 7 / 7700).toFixed(2)} kg</div>
-            `;
+            fullHistory = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
+            updateChartWithData();
         } catch (e) { }
         showLoading(false);
     }
 
+    function changeView(view) {
+        currentView = view;
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + view).classList.add('active');
+        document.getElementById('month-picker-container').style.display = (view === 'month') ? 'block' : 'none';
+        updateChartWithData();
+    }
+
+    function updateChartWithData() {
+        let filtered = [];
+        const monthVal = document.getElementById('month-picker').value; // YYYY-MM
+
+        if (currentView === '7') {
+            filtered = fullHistory.slice(-7);
+        } else if (currentView === 'month') {
+            filtered = fullHistory.filter(h => h.date.startsWith(monthVal));
+        } else {
+            filtered = fullHistory;
+        }
+
+        const ctx = document.getElementById('weightChart').getContext('2d');
+        if(window.myChart) window.myChart.destroy();
+        window.myChart = new Chart(ctx, {
+            data: {
+                labels: filtered.map(h => h.date.slice(5)),
+                datasets: [
+                    { type: 'line', label: 'Súly', data: filtered.map(h => h.weight), borderColor: '#0a84ff', tension: 0.3, yAxisID: 'y' },
+                    { type: 'bar', label: 'Deficit', data: filtered.map(h => h.deficit), backgroundColor: filtered.map(h => h.deficit > 0 ? 'rgba(48, 209, 88, 0.3)' : 'rgba(255, 69, 58, 0.3)'), yAxisID: 'y1' }
+                ]
+            },
+            options: {
+                scales: {
+                    y: { position: 'left', ticks: { color: '#8e8e93', font: { size: 10 } } },
+                    y1: { position: 'right', grid: { display: false }, ticks: { display: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        const avgDef = filtered.length ? filtered.reduce((a, b) => a + (b.deficit || 0), 0) / filtered.length : 0;
+        document.getElementById('summary').innerHTML = `
+            <div style="font-size:11px; opacity:0.7">Átlag deficit ebben a nézetben:</div>
+            <div style="font-size:18px; font-weight:800; color:var(--accent)">${Math.round(avgDef)} kcal/nap</div>
+            <div style="font-size:11px; opacity:0.7; margin-top:5px">Várható fogyás: ${(avgDef * filtered.length / 7700).toFixed(2)} kg</div>
+        `;
+    }
+
+    async function exportToExcel() {
+        let csv = "\uFEFFDatum;Suly;Deficit;Viz\n";
+        fullHistory.forEach(h => { csv += `${h.date};${h.weight || ''};${h.deficit || ''};${h.water || ''}\n`; });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+        link.download = `fogyokura_export.csv`;
+        link.click();
+    }
+
     function logout() { localStorage.removeItem('diet_session'); location.reload(); }
     function closeModal() { document.getElementById('chart-modal').style.display = 'none'; }
+    document.getElementById('date').addEventListener('change', loadDailyData);
     if(currentUser) initApp();
 </script>
 </body>
