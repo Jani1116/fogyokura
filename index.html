@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fogyókúra Elite 2026 - Pro</title>
+    <title>Fogyókúra Elite Pro - Multi-Axis</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -12,29 +12,25 @@
             --text: #ffffff; --success: #30d158; --gray: #8e8e93; --danger: #ff453a;
             --water: #007aff; --trend: #ff9f0a;
         }
-        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .container { max-width: 450px; margin: auto; background: var(--glass); backdrop-filter: blur(15px); padding: 20px; border-radius: 30px; border: 1px solid var(--border); min-height: 85vh; display: flex; flex-direction: column; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .container { max-width: 500px; margin: auto; background: var(--glass); backdrop-filter: blur(15px); padding: 20px; border-radius: 30px; border: 1px solid var(--border); min-height: 90vh; display: flex; flex-direction: column; }
         h1 { font-size: 22px; text-align: center; margin-bottom: 20px; font-weight: 800; color: var(--accent); letter-spacing: 1px; }
-        .input-card { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 18px; margin-bottom: 12px; border: 1px solid var(--border); position: relative; }
-        label { display: block; font-size: 11px; color: var(--gray); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
-        input { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; }
+        .input-card { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 18px; margin-bottom: 12px; border: 1px solid var(--border); }
+        label { display: block; font-size: 11px; color: var(--gray); text-transform: uppercase; margin-bottom: 4px; }
+        input { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; box-sizing: border-box; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 18px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: 0.2s; }
-        .main-btn:active { transform: scale(0.98); opacity: 0.8; }
+        .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 18px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
         .stats-box { margin-top: 15px; padding: 15px; background: rgba(10, 132, 255, 0.1); border-radius: 20px; border: 1px solid rgba(10, 132, 255, 0.2); }
         .info-tag { font-size: 12px; color: var(--accent); font-weight: bold; margin-bottom: 8px; display: block; }
-        .water-btns { display: flex; gap: 5px; margin-top: 8px; }
-        .btn-sm { flex: 1; padding: 8px; font-size: 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.1); color: white; cursor: pointer; }
-        .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 100; padding: 20px; overflow-y: auto; }
-        #loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; color: var(--accent); font-weight: bold; font-size: 14px; letter-spacing: 2px; }
         .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 8px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--water); width: 0%; transition: 0.3s; }
+        .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 100; padding: 20px; overflow-y: auto; }
         .view-selector { display: flex; gap: 5px; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 12px; }
-        .view-btn { flex: 1; border: none; background: none; color: var(--gray); padding: 8px; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 8px; }
+        .view-btn { flex: 1; border: none; background: none; color: var(--gray); padding: 10px; font-size: 11px; font-weight: bold; border-radius: 8px; }
         .view-btn.active { background: var(--accent); color: white; }
-        .toggle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 15px; border: 1px solid var(--border); }
-        .toggle-item { font-size: 10px; color: var(--gray); display: flex; align-items: center; gap: 6px; cursor: pointer; }
-        .toggle-item input { width: auto; }
+        .toggle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 15px; }
+        .toggle-item { font-size: 10px; color: var(--gray); display: flex; align-items: center; gap: 6px; }
+        #loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; color: var(--accent); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -43,8 +39,8 @@
 
 <div id="login-screen" class="container" style="justify-content: center;">
     <h1>FOGYÓKÚRA ELITE</h1>
-    <div class="input-card"><label>Név</label><input type="text" id="login-user" placeholder="Felhasználónév"></div>
-    <div class="input-card"><label>Jelszó</label><input type="password" id="login-pass" placeholder="••••••••"></div>
+    <div class="input-card"><label>Név</label><input type="text" id="login-user" placeholder="Jani"></div>
+    <div class="input-card"><label>Jelszó</label><input type="password" id="login-pass" placeholder="••••"></div>
     <button class="main-btn" onclick="handleLogin()">BELÉPÉS</button>
 </div>
 
@@ -52,8 +48,8 @@
     <div id="user-display" style="font-size: 10px; color: var(--accent); text-align: center; margin-bottom: 10px; letter-spacing: 2px; font-weight: bold;"></div>
     <div class="input-card"><label>Dátum</label><input type="date" id="date"></div>
     <div class="grid">
-        <div class="input-card"><label>Reggeli súly (kg)</label><input type="number" id="weight" step="0.1"></div>
-        <div class="input-card"><label>Esti súly (kg)</label><input type="number" id="weight_evening" step="0.1"></div>
+        <div class="input-card"><label>Reggeli (kg)</label><input type="number" id="weight" step="0.1"></div>
+        <div class="input-card"><label>Esti (kg)</label><input type="number" id="weight_evening" step="0.1"></div>
     </div>
     <div class="input-card">
         <span id="kcal-info" class="info-tag">Mai eddigi: 0 kcal</span>
@@ -66,10 +62,6 @@
             <label>Liter</label>
             <input type="number" id="water" step="0.1">
             <div class="progress-bar"><div id="water-fill" class="progress-fill"></div></div>
-            <div class="water-btns">
-                <button class="btn-sm" onclick="addWater(0.2)">+2dl</button>
-                <button class="btn-sm" onclick="addWater(0.5)">+5dl</button>
-            </div>
         </div>
     </div>
     <div id="quick-stats" class="stats-box" style="display:none">
@@ -98,7 +90,7 @@
         <label class="toggle-item"><input type="checkbox" id="t-trend" checked onchange="updateChartWithData()"> Trend</label>
         <label class="toggle-item"><input type="checkbox" id="t-steps" onchange="updateChartWithData()"> Lépés</label>
         <label class="toggle-item"><input type="checkbox" id="t-water" onchange="updateChartWithData()"> Víz</label>
-        <label class="toggle-item"><input type="checkbox" id="t-deficit" checked onchange="updateChartWithData()"> Deficit</label>
+        <label class="toggle-item"><input type="checkbox" id="t-deficit" onchange="updateChartWithData()"> Deficit</label>
     </div>
 
     <div id="month-picker-container" class="input-card" style="display:none; margin-bottom: 10px;">
@@ -118,12 +110,11 @@
     const BIRTH_DATE = new Date('1985-11-16');
     const DB_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.com/";
     let currentUser = JSON.parse(localStorage.getItem('diet_session'));
-    let currentDayData = {};
     let fullHistory = [];
+    let currentDayData = {};
     let currentView = '7';
 
     document.getElementById('date').valueAsDate = new Date();
-    document.getElementById('month-picker').value = new Date().toISOString().slice(0, 7);
 
     function showLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
 
@@ -139,8 +130,8 @@
                 currentUser = { name: u };
                 localStorage.setItem('diet_session', JSON.stringify(currentUser));
                 initApp();
-            } else { alert("Hibás adatok!"); }
-        } catch (e) { alert("Hiba!"); }
+            } else { alert("Hiba!"); }
+        } catch (e) { alert("Szerver hiba!"); }
         showLoading(false);
     }
 
@@ -161,8 +152,6 @@
             document.getElementById('weight').value = currentDayData.weight || '';
             document.getElementById('weight_evening').value = currentDayData.weight_evening || '';
             document.getElementById('steps').value = currentDayData.steps || '';
-            document.getElementById('kcal').value = '';
-            document.getElementById('water').value = '';
             document.getElementById('kcal-info').innerText = `Mai eddigi: ${currentDayData.kcal_in || 0} kcal`;
             const wGoal = currentDayData.weight ? (currentDayData.weight * 0.04).toFixed(1) : 4.8;
             document.getElementById('water-info').innerText = `Víz: ${currentDayData.water || 0} / ${wGoal} L`;
@@ -176,14 +165,8 @@
         showLoading(false);
     }
 
-    function addWater(val) {
-        let current = parseFloat(document.getElementById('water').value) || 0;
-        document.getElementById('water').value = (current + val).toFixed(2);
-    }
-
     async function saveData() {
         const date = document.getElementById('date').value;
-        const saveBtn = document.getElementById('save-btn');
         showLoading(true);
         let up = { ...currentDayData, date: date };
         const wVal = document.getElementById('weight').value;
@@ -204,33 +187,28 @@
             const stepBurn = (up.steps || 0) * (up.weight * 0.00045); 
             up.deficit = Math.round((bmr + stepBurn) - up.kcal_in);
         }
-        try {
-            await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { method: 'PATCH', body: JSON.stringify(up) });
-            await loadDailyData();
-            saveBtn.style.background = "var(--success)";
-            saveBtn.innerText = "✓ MENTVE";
-            setTimeout(() => { saveBtn.style.background = "var(--accent)"; saveBtn.innerText = "MENTÉS"; }, 1500);
-        } catch (e) { alert("Sikertelen mentés!"); }
+        await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { method: 'PATCH', body: JSON.stringify(up) });
+        document.getElementById('kcal').value = '';
+        document.getElementById('water').value = '';
+        await loadDailyData();
         showLoading(false);
     }
 
     async function openCharts() {
         document.getElementById('chart-modal').style.display = 'block';
         showLoading(true);
-        try {
-            const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
-            const data = await res.json();
-            fullHistory = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
-            updateChartWithData();
-        } catch (e) {}
+        const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
+        const data = await res.json();
+        fullHistory = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
+        updateChartWithData();
         showLoading(false);
     }
 
-    function changeView(view) {
-        currentView = view;
+    function changeView(v) {
+        currentView = v;
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn-' + view).classList.add('active');
-        document.getElementById('month-picker-container').style.display = (view === 'month') ? 'block' : 'none';
+        document.getElementById('btn-'+v).classList.add('active');
+        document.getElementById('month-picker-container').style.display = (v === 'month') ? 'block' : 'none';
         updateChartWithData();
     }
 
@@ -242,35 +220,18 @@
         else filtered = fullHistory;
 
         const trendData = filtered.map((item, index) => {
-            const start = Math.max(0, index - 6);
-            const subset = filtered.slice(start, index + 1).filter(d => d.weight);
-            if(subset.length === 0) return null;
-            const sum = subset.reduce((a, b) => a + b.weight, 0);
-            return (sum / subset.length).toFixed(2);
+            const subset = filtered.slice(Math.max(0, index - 6), index + 1).filter(d => d.weight);
+            return subset.length ? (subset.reduce((a, b) => a + b.weight, 0) / subset.length).toFixed(2) : null;
         });
 
         const datasets = [];
-        const showMorning = document.getElementById('t-morning').checked;
-        const showEvening = document.getElementById('t-evening').checked;
-        const showSteps = document.getElementById('t-steps').checked;
-        const showWater = document.getElementById('t-water').checked;
-        const showTrend = document.getElementById('t-trend').checked;
-        const showDeficit = document.getElementById('t-deficit').checked;
-
-        if(showMorning) datasets.push({ type: 'line', label: 'Reggel', data: filtered.map(h => h.weight), borderColor: '#0a84ff', tension: 0.3, yAxisID: 'y', pointRadius: 3 });
-        if(showEvening) datasets.push({ type: 'line', label: 'Este', data: filtered.map(h => h.weight_evening), borderColor: '#5e5ce6', borderDash: [5,5], tension: 0.3, yAxisID: 'y', pointRadius: 0 });
-        if(showTrend) datasets.push({ type: 'line', label: 'Trend', data: trendData, borderColor: '#ff9f0a', borderWidth: 3, pointRadius: 0, tension: 0.4, yAxisID: 'y' });
+        if(document.getElementById('t-morning').checked) datasets.push({ type: 'line', label: 'Reggel', data: filtered.map(h => h.weight), borderColor: '#0a84ff', yAxisID: 'y' });
+        if(document.getElementById('t-evening').checked) datasets.push({ type: 'line', label: 'Este', data: filtered.map(h => h.weight_evening), borderColor: '#5e5ce6', borderDash:[5,5], yAxisID: 'y' });
+        if(document.getElementById('t-trend').checked) datasets.push({ type: 'line', label: 'Trend', data: trendData, borderColor: '#ff9f0a', borderWidth: 3, yAxisID: 'y' });
         
-        if(showDeficit) {
-            datasets.push({ 
-                type: 'bar', label: 'Deficit', 
-                data: filtered.map(h => h.deficit), 
-                backgroundColor: filtered.map(h => h.deficit > 0 ? 'rgba(48, 209, 88, 0.4)' : 'rgba(255, 69, 58, 0.4)'),
-                yAxisID: 'y_fixed' 
-            });
-        }
-        if(showSteps) datasets.push({ type: 'bar', label: 'Lépés', data: filtered.map(h => h.steps ? 8 : 0), backgroundColor: 'rgba(255,255,255,0.15)', yAxisID: 'y_fixed' });
-        if(showWater) datasets.push({ type: 'bar', label: 'Víz', data: filtered.map(h => h.water ? 5 : 0), backgroundColor: 'rgba(0,122,255,0.2)', yAxisID: 'y_fixed' });
+        if(document.getElementById('t-steps').checked) datasets.push({ type: 'bar', label: 'Lépés', data: filtered.map(h => h.steps), backgroundColor: 'rgba(255,255,255,0.1)', yAxisID: 'ySteps' });
+        if(document.getElementById('t-water').checked) datasets.push({ type: 'bar', label: 'Víz', data: filtered.map(h => h.water), backgroundColor: 'rgba(0,122,255,0.2)', yAxisID: 'yWater' });
+        if(document.getElementById('t-deficit').checked) datasets.push({ type: 'bar', label: 'Deficit', data: filtered.map(h => h.deficit), backgroundColor: filtered.map(h => h.deficit > 0 ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)'), yAxisID: 'yDeficit' });
 
         const ctx = document.getElementById('weightChart').getContext('2d');
         if(window.myChart) window.myChart.destroy();
@@ -279,37 +240,28 @@
             options: {
                 responsive: true,
                 scales: {
-                    y: { position: 'left', ticks: { color: '#8e8e93', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y_fixed: { position: 'right', display: false, min: -2000, max: 2000 } // Tág skála a deficitnek
+                    y: { position: 'left', ticks: { color: '#8e8e93' } },
+                    ySteps: { display: false, min: 0, max: 25000 },
+                    yWater: { display: false, min: 0, max: 10 },
+                    yDeficit: { display: false, min: -3000, max: 3000 }
                 },
                 plugins: { 
                     legend: { display: false },
-                    tooltip: {
-                        mode: 'index', intersect: false,
-                        callbacks: {
-                            label: (item) => `${item.dataset.label}: ${item.raw || 0}`
-                        }
-                    }
+                    tooltip: { mode: 'index', intersect: false }
                 }
             }
         });
 
-        const avgDef = filtered.length ? filtered.reduce((a, b) => a + (b.deficit || 0), 0) / filtered.length : 0;
-        document.getElementById('summary').innerHTML = `
-            <div style="font-size:11px; opacity:0.7">Átlag deficit:</div>
-            <div style="font-size:18px; font-weight:800; color:var(--accent)">${Math.round(avgDef)} kcal/nap</div>
-            <div style="font-size:11px; opacity:0.7; margin-top:5px">Várható fogyás ezen időszak alatt: ${(avgDef * filtered.length / 7700).toFixed(2)} kg</div>
-        `;
+        const avgDef = filtered.reduce((a, b) => a + (b.deficit || 0), 0) / (filtered.length || 1);
+        document.getElementById('summary').innerHTML = `<b>Átlag deficit: ${Math.round(avgDef)} kcal/nap</b><br><small>Várható fogyás: ${(avgDef * filtered.length / 7700).toFixed(2)} kg</small>`;
     }
 
     async function exportToExcel() {
-        let csv = "\uFEFFDatum;Reggeli Suly;Esti Suly;Kcal Bevitel;Lepesszam;Napi Deficit;Viz (Liter)\n";
-        fullHistory.forEach(h => { 
-            csv += `${h.date};${h.weight || '-'};${h.weight_evening || '-'};${h.kcal_in || '-'};${h.steps || '-'};${h.deficit || '-'};${h.water || '-'}\n`; 
-        });
+        let csv = "\uFEFFDatum;Reggel;Este;Kcal;Lepes;Deficit;Viz\n";
+        fullHistory.forEach(h => csv += `${h.date};${h.weight||''};${h.weight_evening||''};${h.kcal_in||''};${h.steps||''};${h.deficit||''};${h.water||''}\n`);
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        link.download = `fogyokura_teljes_export_${new Date().toISOString().slice(0,10)}.csv`;
+        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        link.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
         link.click();
     }
 
