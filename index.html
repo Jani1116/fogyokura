@@ -153,7 +153,7 @@
             document.getElementById('weight_evening').value = currentDayData.weight_evening || '';
             document.getElementById('steps').value = currentDayData.steps || '';
             document.getElementById('kcal-info').innerText = `Mai eddigi: ${currentDayData.kcal_in || 0} kcal`;
-            const wGoal = currentDayData.weight ? (currentDayData.weight * 0.04).toFixed(1) : 4.8;
+            const wGoal = currentDayData.weight ? (currentDayData.weight * 0.035).toFixed(1) : 3.5;
             document.getElementById('water-info').innerText = `Víz: ${currentDayData.water || 0} / ${wGoal} L`;
             document.getElementById('water-fill').style.width = Math.min(((currentDayData.water || 0) / wGoal) * 100, 100) + "%";
             if(currentDayData.deficit !== undefined) {
