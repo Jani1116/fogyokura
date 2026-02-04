@@ -61,6 +61,10 @@
             <span id="water-info" class="info-tag">Víz: 0 / 4.8 L</span>
             <label>Liter</label>
             <input type="number" id="water" step="0.1">
+            <div style="display: flex; gap: 5px; margin-top: 8px;">
+                <button class="main-btn" style="margin:0; padding:8px; font-size:10px; background:var(--water)" onclick="addWater(0.5)">+0.5 L</button>
+                <button class="main-btn" style="margin:0; padding:8px; font-size:10px; background:var(--water)" onclick="addWater(0.2)">+0.2 L</button>
+            </div>
             <div class="progress-bar"><div id="water-fill" class="progress-fill"></div></div>
         </div>
     </div>
@@ -162,6 +166,16 @@
                 document.getElementById('quick-stats').style.display = 'block';
             } else { document.getElementById('quick-stats').style.display = 'none'; }
         } catch (e) {}
+        showLoading(false);
+    }
+
+    async function addWater(amount) {
+        const date = document.getElementById('date').value;
+        showLoading(true);
+        let up = { ...currentDayData, date: date };
+        up.water = (currentDayData.water || 0) + amount;
+        await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { method: 'PATCH', body: JSON.stringify(up) });
+        await loadDailyData();
         showLoading(false);
     }
 
