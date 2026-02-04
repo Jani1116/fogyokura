@@ -31,6 +31,9 @@
         .toggle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 15px; }
         .toggle-item { font-size: 10px; color: var(--gray); display: flex; align-items: center; gap: 6px; }
         #loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; color: var(--accent); font-weight: bold; }
+        #save-status { text-align: center; font-weight: bold; font-size: 16px; padding: 16px; margin-top: 8px; display: none; }
+        .status-success { color: var(--success); }
+        .status-error { color: var(--danger); }
     </style>
 </head>
 <body>
@@ -58,20 +61,22 @@
     <div class="grid">
         <div class="input-card"><label>Lépés</label><input type="number" id="steps"></div>
         <div class="input-card">
-            <span id="water-info" class="info-tag">Víz: 0 / 4.8 L</span>
+            <span id="water-info" class="info-tag">Víz: 0 / 3.5 L</span>
             <label>Liter</label>
             <input type="number" id="water" step="0.1">
             <div style="display: flex; gap: 5px; margin-top: 8px;">
-                <button class="main-btn" style="margin:0; padding:8px; font-size:10px; background:var(--water)" onclick="document.getElementById('water').value = 0.5">+0.5 L (kis üveg)</button>
-                <button class="main-btn" style="margin:0; padding:8px; font-size:10px; background:var(--water)" onclick="document.getElementById('water').value = 0.2">+0.2 L (pohár)</button>
+                <button class="main-btn" style="margin:0; padding:8px; font-size:10px; background:var(--water)" onclick="document.getElementById('water').value = 0.5">+0.5 L</button>
+                <button class="main-btn" style="margin:0; padding:8px; font-size:10px; background:var(--water)" onclick="document.getElementById('water').value = 0.2">+0.2 L</button>
             </div>
             <div class="progress-bar"><div id="water-fill" class="progress-fill"></div></div>
         </div>
     </div>
-    <div id="quick-stats" class="stats-box" style="display:none">
-        <div style="display:flex; justify-content: space-between;"><span>Napi deficit:</span> <b id="res-deficit">0 kcal</b></div>
+
+    <div id="save-container">
+        <button class="main-btn" id="save-btn" onclick="saveData()">MENTÉS</button>
+        <div id="save-status"></div>
     </div>
-    <button class="main-btn" id="save-btn" onclick="saveData()">MENTÉS</button>
+    
     <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">STATISZTIKA</button>
     <button onclick="logout()" style="background:none; border:none; color:var(--gray); width:100%; font-size:10px; margin-top: 25px;">Kijelentkezés</button>
 </div>
@@ -81,13 +86,11 @@
         <h2 style="margin:0; font-size: 18px;">Haladás</h2>
         <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:28px">✕</button>
     </div>
-
     <div class="view-selector">
         <button class="view-btn active" id="btn-7" onclick="changeView('7')">7 NAP</button>
         <button class="view-btn" id="btn-month" onclick="changeView('month')">HÓNAP</button>
         <button class="view-btn" id="btn-all" onclick="changeView('all')">ÖSSZES</button>
     </div>
-
     <div class="toggle-grid">
         <label class="toggle-item"><input type="checkbox" id="t-morning" checked onchange="updateChartWithData()"> Reggel</label>
         <label class="toggle-item"><input type="checkbox" id="t-evening" onchange="updateChartWithData()"> Este</label>
@@ -96,17 +99,14 @@
         <label class="toggle-item"><input type="checkbox" id="t-water" onchange="updateChartWithData()"> Víz</label>
         <label class="toggle-item"><input type="checkbox" id="t-deficit" onchange="updateChartWithData()"> Deficit</label>
     </div>
-
     <div id="month-picker-container" class="input-card" style="display:none; margin-bottom: 10px;">
         <label>Hónap</label><input type="month" id="month-picker" onchange="updateChartWithData()">
     </div>
-
     <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 20px;">
         <canvas id="weightChart"></canvas>
     </div>
-    
     <div id="summary" class="stats-box"></div>
-    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">TELJES CSV EXPORT</button>
+    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">CSV EXPORT</button>
 </div>
 
 <script>
@@ -121,6 +121,16 @@
     document.getElementById('date').valueAsDate = new Date();
 
     function showLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
+
+    function flashStatus(text, isSuccess) {
+        const btn = document.getElementById('save-btn');
+        const statusDiv = document.getElementById('save-status');
+        btn.style.display = 'none';
+        statusDiv.innerText = text;
+        statusDiv.className = isSuccess ? 'status-success' : 'status-error';
+        statusDiv.style.display = 'block';
+        setTimeout(() => { statusDiv.style.display = 'none'; btn.style.display = 'block'; }, 1000);
+    }
 
     async function handleLogin() {
         const u = document.getElementById('login-user').value.trim();
@@ -149,7 +159,6 @@
     async function loadDailyData() {
         const date = document.getElementById('date').value;
         if(!currentUser || !date) return;
-        showLoading(true);
         try {
             const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`);
             currentDayData = await res.json() || {};
@@ -160,13 +169,7 @@
             const wGoal = currentDayData.weight ? (currentDayData.weight * 0.035).toFixed(1) : 3.5;
             document.getElementById('water-info').innerText = `Víz: ${currentDayData.water || 0} / ${wGoal} L`;
             document.getElementById('water-fill').style.width = Math.min(((currentDayData.water || 0) / wGoal) * 100, 100) + "%";
-            if(currentDayData.deficit !== undefined) {
-                document.getElementById('res-deficit').innerText = currentDayData.deficit + " kcal";
-                document.getElementById('res-deficit').style.color = currentDayData.deficit > 0 ? "var(--success)" : "var(--danger)";
-                document.getElementById('quick-stats').style.display = 'block';
-            } else { document.getElementById('quick-stats').style.display = 'none'; }
         } catch (e) {}
-        showLoading(false);
     }
 
     async function saveData() {
@@ -185,17 +188,28 @@
         if(addKcal) up.kcal_in = (currentDayData.kcal_in || 0) + parseInt(addKcal);
         if(addWat) up.water = (currentDayData.water || 0) + parseFloat(addWat);
 
-        if(up.weight && up.kcal_in) {
+        if(up.weight) {
             const age = Math.abs(new Date(Date.now() - BIRTH_DATE.getTime()).getUTCFullYear() - 1970);
             const bmr = (10 * up.weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
             const stepBurn = (up.steps || 0) * (up.weight * 0.00045); 
-            up.deficit = Math.round((bmr + stepBurn) - up.kcal_in);
+            if(up.kcal_in) up.deficit = Math.round((bmr + stepBurn) - up.kcal_in);
         }
-        await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { method: 'PATCH', body: JSON.stringify(up) });
-        document.getElementById('kcal').value = '';
-        document.getElementById('water').value = '';
-        await loadDailyData();
-        showLoading(false);
+
+        try {
+            const response = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { 
+                method: 'PATCH', 
+                body: JSON.stringify(up) 
+            });
+            if (!response.ok) throw new Error();
+            document.getElementById('kcal').value = '';
+            document.getElementById('water').value = '';
+            await loadDailyData();
+            showLoading(false);
+            flashStatus("Szinkronizálva !", true);
+        } catch (error) {
+            showLoading(false);
+            flashStatus("Nincs szinkronizálva ! ! !", false);
+        }
     }
 
     async function openCharts() {
@@ -232,7 +246,6 @@
         if(document.getElementById('t-morning').checked) datasets.push({ type: 'line', label: 'Reggel', data: filtered.map(h => h.weight), borderColor: '#0a84ff', yAxisID: 'y' });
         if(document.getElementById('t-evening').checked) datasets.push({ type: 'line', label: 'Este', data: filtered.map(h => h.weight_evening), borderColor: '#5e5ce6', borderDash:[5,5], yAxisID: 'y' });
         if(document.getElementById('t-trend').checked) datasets.push({ type: 'line', label: 'Trend', data: trendData, borderColor: '#ff9f0a', borderWidth: 3, yAxisID: 'y' });
-        
         if(document.getElementById('t-steps').checked) datasets.push({ type: 'bar', label: 'Lépés', data: filtered.map(h => h.steps), backgroundColor: 'rgba(255,255,255,0.1)', yAxisID: 'ySteps' });
         if(document.getElementById('t-water').checked) datasets.push({ type: 'bar', label: 'Víz', data: filtered.map(h => h.water), backgroundColor: 'rgba(0,122,255,0.2)', yAxisID: 'yWater' });
         if(document.getElementById('t-deficit').checked) datasets.push({ type: 'bar', label: 'Deficit', data: filtered.map(h => h.deficit), backgroundColor: filtered.map(h => h.deficit > 0 ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)'), yAxisID: 'yDeficit' });
@@ -249,10 +262,7 @@
                     yWater: { display: false, min: 0, max: 10 },
                     yDeficit: { display: false, min: -3000, max: 3000 }
                 },
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: { mode: 'index', intersect: false }
-                }
+                plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } }
             }
         });
 
