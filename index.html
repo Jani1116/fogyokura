@@ -51,15 +51,30 @@
     <div id="user-display" style="font-size: 10px; color: var(--accent); text-align: center; margin-bottom: 10px; letter-spacing: 2px; font-weight: bold;"></div>
     <div class="input-card"><label>Dátum</label><input type="date" id="date"></div>
     <div class="grid">
-        <div class="input-card"><label>Reggeli (kg)</label><input type="number" id="weight" step="0.1"></div>
+        <div class="input-card"><label>Reggeli (kg)</label><input type="number" id="weight" step="0.1" oninput="liveCalc()"></div>
         <div class="input-card"><label>Esti (kg)</label><input type="number" id="weight_evening" step="0.1"></div>
     </div>
-    <div class="input-card">
-        <span id="kcal-info" class="info-tag">Mai eddigi: 0 kcal</span>
-        <label>Új bevitel (+)</label><input type="number" id="kcal">
+    
+    <div class="input-card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div>
+            <span id="kcal-info" class="info-tag">Mai eddigi: 0 kcal</span>
+            <label>Új bevitel (+)</label>
+            <input type="number" id="kcal" oninput="liveCalc()">
+        </div>
+        <div style="display: flex; flex-direction: column; justify-content: center; border-left: 1px solid var(--border); padding-left: 10px;">
+            <div style="margin-bottom: 8px;">
+                <label style="margin:0;">Napi def.</label>
+                <span id="daily-def-display" style="color: var(--success); font-weight: bold; font-size: 14px;">0 kcal</span>
+            </div>
+            <div>
+                <label style="margin:0;">Össz. def.</label>
+                <span id="total-def-display" style="color: var(--trend); font-weight: bold; font-size: 14px;">0 kcal</span>
+            </div>
+        </div>
     </div>
+
     <div class="grid">
-        <div class="input-card"><label>Lépés</label><input type="number" id="steps"></div>
+        <div class="input-card"><label>Lépés</label><input type="number" id="steps" oninput="liveCalc()"></div>
         <div class="input-card">
             <span id="water-info" class="info-tag">Víz: 0 / 3.5 L</span>
             <label>Liter</label>
@@ -169,6 +184,39 @@
             const wGoal = currentDayData.weight ? (currentDayData.weight * 0.035).toFixed(1) : 3.5;
             document.getElementById('water-info').innerText = `Víz: ${currentDayData.water || 0} / ${wGoal} L`;
             document.getElementById('water-fill').style.width = Math.min(((currentDayData.water || 0) / wGoal) * 100, 100) + "%";
+            
+            // Frissítés a betöltéskor
+            liveCalc();
+            updateTotalDeficit();
+        } catch (e) {}
+    }
+
+    function liveCalc() {
+        const weight = parseFloat(document.getElementById('weight').value) || currentDayData.weight;
+        const steps = parseInt(document.getElementById('steps').value) || currentDayData.steps || 0;
+        const addKcal = parseInt(document.getElementById('kcal').value) || 0;
+        const currentKcalIn = (currentDayData.kcal_in || 0) + addKcal;
+
+        if (weight) {
+            const age = Math.abs(new Date(Date.now() - BIRTH_DATE.getTime()).getUTCFullYear() - 1970);
+            const bmr = (10 * weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
+            const stepBurn = steps * (weight * 0.00045);
+            const liveDeficit = Math.round((bmr + stepBurn) - currentKcalIn);
+
+            const display = document.getElementById('daily-def-display');
+            display.innerText = `${liveDeficit} kcal`;
+            display.style.color = (liveDeficit >= 0) ? 'var(--success)' : 'var(--danger)';
+        }
+    }
+
+    async function updateTotalDeficit() {
+        try {
+            const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
+            const data = await res.json();
+            if (data) {
+                const total = Object.values(data).reduce((acc, curr) => acc + (curr.deficit || 0), 0);
+                document.getElementById('total-def-display').innerText = `${Math.round(total)} kcal`;
+            }
         } catch (e) {}
     }
 
@@ -176,6 +224,7 @@
         const date = document.getElementById('date').value;
         showLoading(true);
         let up = { ...currentDayData, date: date };
+        
         const wVal = document.getElementById('weight').value;
         const wEveVal = document.getElementById('weight_evening').value;
         const addKcal = document.getElementById('kcal').value;
@@ -185,14 +234,16 @@
         if(wVal) up.weight = parseFloat(wVal);
         if(wEveVal) up.weight_evening = parseFloat(wEveVal);
         if(sVal) up.steps = parseInt(sVal);
-        if(addKcal) up.kcal_in = (currentDayData.kcal_in || 0) + parseInt(addKcal);
-        if(addWat) up.water = (currentDayData.water || 0) + parseFloat(addWat);
+        
+        // Fixált kalória és víz hozzáadás logic
+        up.kcal_in = (currentDayData.kcal_in || 0) + (parseInt(addKcal) || 0);
+        up.water = (currentDayData.water || 0) + (parseFloat(addWat) || 0);
 
         if(up.weight) {
             const age = Math.abs(new Date(Date.now() - BIRTH_DATE.getTime()).getUTCFullYear() - 1970);
             const bmr = (10 * up.weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
             const stepBurn = (up.steps || 0) * (up.weight * 0.00045); 
-            if(up.kcal_in) up.deficit = Math.round((bmr + stepBurn) - up.kcal_in);
+            up.deficit = Math.round((bmr + stepBurn) - up.kcal_in);
         }
 
         try {
@@ -248,7 +299,7 @@
         if(document.getElementById('t-trend').checked) datasets.push({ type: 'line', label: 'Trend', data: trendData, borderColor: '#ff9f0a', borderWidth: 3, yAxisID: 'y' });
         if(document.getElementById('t-steps').checked) datasets.push({ type: 'bar', label: 'Lépés', data: filtered.map(h => h.steps), backgroundColor: 'rgba(255,255,255,0.1)', yAxisID: 'ySteps' });
         if(document.getElementById('t-water').checked) datasets.push({ type: 'bar', label: 'Víz', data: filtered.map(h => h.water), backgroundColor: 'rgba(0,122,255,0.2)', yAxisID: 'yWater' });
-        if(document.getElementById('t-deficit').checked) datasets.push({ type: 'bar', label: 'Deficit', data: filtered.map(h => h.deficit), backgroundColor: filtered.map(h => h.deficit > 0 ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)'), yAxisID: 'yDeficit' });
+        if(document.getElementById('t-deficit').checked) datasets.push({ type: 'bar', label: 'Deficit', data: filtered.map(h => h.deficit), backgroundColor: filtered.map(h => (h.deficit || 0) > 0 ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)'), yAxisID: 'yDeficit' });
 
         const ctx = document.getElementById('weightChart').getContext('2d');
         if(window.myChart) window.myChart.destroy();
