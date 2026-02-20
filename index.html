@@ -21,7 +21,7 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 18px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
         .stats-box { margin-top: 15px; padding: 15px; background: rgba(10, 132, 255, 0.1); border-radius: 20px; border: 1px solid rgba(10, 132, 255, 0.2); }
-        .info-tag { font-size: 12px; color: var(--accent); font-weight: bold; margin-bottom: 8px; display: block; }
+        .info-tag { font-size: 12px; color: var(--accent); font-weight: bold; margin-bottom: 8px; display: block; cursor: pointer; text-decoration: underline; }
         .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 8px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--water); width: 0%; transition: 0.3s; }
         .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 100; padding: 20px; overflow-y: auto; }
@@ -30,6 +30,8 @@
         .view-btn.active { background: var(--accent); color: white; }
         .toggle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 15px; }
         .toggle-item { font-size: 10px; color: var(--gray); display: flex; align-items: center; gap: 6px; }
+        .log-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); }
+        .del-btn { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; }
         #loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; color: var(--accent); font-weight: bold; }
         #save-status { text-align: center; font-weight: bold; font-size: 16px; padding: 16px; margin-top: 8px; display: none; }
         .status-success { color: var(--success); }
@@ -57,7 +59,7 @@
     
     <div class="input-card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
         <div>
-            <span id="kcal-info" class="info-tag">Mai eddigi: 0 kcal</span>
+            <span id="kcal-info" class="info-tag" onclick="showKcalLog()">Mai eddigi: 0 kcal</span>
             <label>Új bevitel (+)</label>
             <input type="number" id="kcal" oninput="liveCalc()">
         </div>
@@ -76,7 +78,7 @@
     <div class="grid">
         <div class="input-card"><label>Lépés</label><input type="number" id="steps" oninput="liveCalc()"></div>
         <div class="input-card">
-            <span id="water-info" class="info-tag">Víz: 0 / 3.5 L</span>
+            <span id="water-info" class="info-tag" style="text-decoration:none; cursor:default;">Víz: 0 / 3.5 L</span>
             <label>Liter</label>
             <input type="number" id="water" step="0.1">
             <div style="display: flex; gap: 5px; margin-top: 8px;">
@@ -98,30 +100,37 @@
 
 <div id="chart-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-        <h2 style="margin:0; font-size: 18px;">Haladás</h2>
+        <h2 id="modal-title" style="margin:0; font-size: 18px;">Haladás</h2>
         <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:28px">✕</button>
     </div>
-    <div class="view-selector">
-        <button class="view-btn active" id="btn-7" onclick="changeView('7')">7 NAP</button>
-        <button class="view-btn" id="btn-month" onclick="changeView('month')">HÓNAP</button>
-        <button class="view-btn" id="btn-all" onclick="changeView('all')">ÖSSZES</button>
+
+    <div id="kcal-log-view" style="display:none;">
+        <div id="kcal-log-list"></div>
     </div>
-    <div class="toggle-grid">
-        <label class="toggle-item"><input type="checkbox" id="t-morning" checked onchange="updateChartWithData()"> Reggel</label>
-        <label class="toggle-item"><input type="checkbox" id="t-evening" onchange="updateChartWithData()"> Este</label>
-        <label class="toggle-item"><input type="checkbox" id="t-trend" checked onchange="updateChartWithData()"> Trend</label>
-        <label class="toggle-item"><input type="checkbox" id="t-steps" onchange="updateChartWithData()"> Lépés</label>
-        <label class="toggle-item"><input type="checkbox" id="t-water" onchange="updateChartWithData()"> Víz</label>
-        <label class="toggle-item"><input type="checkbox" id="t-deficit" onchange="updateChartWithData()"> Deficit</label>
+
+    <div id="stats-view">
+        <div class="view-selector">
+            <button class="view-btn active" id="btn-7" onclick="changeView('7')">7 NAP</button>
+            <button class="view-btn" id="btn-month" onclick="changeView('month')">HÓNAP</button>
+            <button class="view-btn" id="btn-all" onclick="changeView('all')">ÖSSZES</button>
+        </div>
+        <div class="toggle-grid">
+            <label class="toggle-item"><input type="checkbox" id="t-morning" checked onchange="updateChartWithData()"> Reggel</label>
+            <label class="toggle-item"><input type="checkbox" id="t-evening" onchange="updateChartWithData()"> Este</label>
+            <label class="toggle-item"><input type="checkbox" id="t-trend" checked onchange="updateChartWithData()"> Trend</label>
+            <label class="toggle-item"><input type="checkbox" id="t-steps" onchange="updateChartWithData()"> Lépés</label>
+            <label class="toggle-item"><input type="checkbox" id="t-water" onchange="updateChartWithData()"> Víz</label>
+            <label class="toggle-item"><input type="checkbox" id="t-deficit" onchange="updateChartWithData()"> Deficit</label>
+        </div>
+        <div id="month-picker-container" class="input-card" style="display:none; margin-bottom: 10px;">
+            <label>Hónap</label><input type="month" id="month-picker" onchange="updateChartWithData()">
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 20px;">
+            <canvas id="weightChart"></canvas>
+        </div>
+        <div id="summary" class="stats-box"></div>
+        <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">CSV EXPORT</button>
     </div>
-    <div id="month-picker-container" class="input-card" style="display:none; margin-bottom: 10px;">
-        <label>Hónap</label><input type="month" id="month-picker" onchange="updateChartWithData()">
-    </div>
-    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 20px;">
-        <canvas id="weightChart"></canvas>
-    </div>
-    <div id="summary" class="stats-box"></div>
-    <button class="main-btn" style="background:var(--success)" onclick="exportToExcel()">CSV EXPORT</button>
 </div>
 
 <script>
@@ -185,7 +194,6 @@
             document.getElementById('water-info').innerText = `Víz: ${currentDayData.water || 0} / ${wGoal} L`;
             document.getElementById('water-fill').style.width = Math.min(((currentDayData.water || 0) / wGoal) * 100, 100) + "%";
             
-            // Frissítés a betöltéskor
             liveCalc();
             updateTotalDeficit();
         } catch (e) {}
@@ -198,7 +206,10 @@
         const currentKcalIn = (currentDayData.kcal_in || 0) + addKcal;
 
         if (weight) {
-            const age = Math.abs(new Date(Date.now() - BIRTH_DATE.getTime()).getUTCFullYear() - 1970);
+            const today = new Date();
+            let age = today.getFullYear() - 1985;
+            if (today.getMonth() < 10 || (today.getMonth() === 10 && today.getDate() < 16)) age--;
+
             const bmr = (10 * weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
             const stepBurn = steps * (weight * 0.00045);
             const liveDeficit = Math.round((bmr + stepBurn) - currentKcalIn);
@@ -227,31 +238,36 @@
         
         const wVal = document.getElementById('weight').value;
         const wEveVal = document.getElementById('weight_evening').value;
-        const addKcal = document.getElementById('kcal').value;
+        const addKcal = parseInt(document.getElementById('kcal').value) || 0;
         const sVal = document.getElementById('steps').value;
-        const addWat = document.getElementById('water').value;
+        const addWat = parseFloat(document.getElementById('water').value) || 0;
 
         if(wVal) up.weight = parseFloat(wVal);
         if(wEveVal) up.weight_evening = parseFloat(wEveVal);
         if(sVal) up.steps = parseInt(sVal);
         
-        // Fixált kalória és víz hozzáadás logic
-        up.kcal_in = (currentDayData.kcal_in || 0) + (parseInt(addKcal) || 0);
-        up.water = (currentDayData.water || 0) + (parseFloat(addWat) || 0);
+        if(!up.kcal_list) up.kcal_list = [];
+        if(addKcal > 0) {
+            up.kcal_list.push(addKcal);
+            up.kcal_in = up.kcal_list.reduce((a, b) => a + b, 0);
+        }
+        
+        up.water = (currentDayData.water || 0) + addWat;
 
         if(up.weight) {
-            const age = Math.abs(new Date(Date.now() - BIRTH_DATE.getTime()).getUTCFullYear() - 1970);
+            const today = new Date();
+            let age = today.getFullYear() - 1985;
+            if (today.getMonth() < 10 || (today.getMonth() === 10 && today.getDate() < 16)) age--;
             const bmr = (10 * up.weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
             const stepBurn = (up.steps || 0) * (up.weight * 0.00045); 
-            up.deficit = Math.round((bmr + stepBurn) - up.kcal_in);
+            up.deficit = Math.round((bmr + stepBurn) - (up.kcal_in || 0));
         }
 
         try {
-            const response = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { 
+            await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { 
                 method: 'PATCH', 
                 body: JSON.stringify(up) 
             });
-            if (!response.ok) throw new Error();
             document.getElementById('kcal').value = '';
             document.getElementById('water').value = '';
             await loadDailyData();
@@ -259,11 +275,51 @@
             flashStatus("Szinkronizálva !", true);
         } catch (error) {
             showLoading(false);
-            flashStatus("Nincs szinkronizálva ! ! !", false);
+            flashStatus("Hiba!", false);
         }
     }
 
+    function showKcalLog() {
+        const list = currentDayData.kcal_list || [];
+        document.getElementById('modal-title').innerText = "Bevitelek módosítása";
+        document.getElementById('stats-view').style.display = 'none';
+        document.getElementById('kcal-log-view').style.display = 'block';
+        
+        const logCont = document.getElementById('kcal-log-list');
+        logCont.innerHTML = list.length ? '' : '<p style="text-align:center; color:var(--gray);">Nincs adat.</p>';
+        
+        list.forEach((val, idx) => {
+            logCont.innerHTML += `
+                <div class="log-item">
+                    <span>+ ${val} kcal</span>
+                    <button class="del-btn" onclick="deleteKcalEntry(${idx})">TÖRLÉS</button>
+                </div>`;
+        });
+        document.getElementById('chart-modal').style.display = 'block';
+    }
+
+    async function deleteKcalEntry(index) {
+        if(!confirm("Törlöd ezt a tételt?")) return;
+        let list = [...currentDayData.kcal_list];
+        list.splice(index, 1);
+        const newTotal = list.reduce((a, b) => a + b, 0);
+        
+        showLoading(true);
+        try {
+            await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${document.getElementById('date').value}.json`, { 
+                method: 'PATCH', 
+                body: JSON.stringify({ kcal_in: newTotal, kcal_list: list }) 
+            });
+            await loadDailyData();
+            showKcalLog(); 
+        } catch (e) { alert("Hiba!"); }
+        showLoading(false);
+    }
+
     async function openCharts() {
+        document.getElementById('modal-title').innerText = "Haladás";
+        document.getElementById('kcal-log-view').style.display = 'none';
+        document.getElementById('stats-view').style.display = 'block';
         document.getElementById('chart-modal').style.display = 'block';
         showLoading(true);
         const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
