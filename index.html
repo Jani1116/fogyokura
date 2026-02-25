@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fogyókúra Elite Pro - Multi-Axis</title>
+    <title>Fogyókúra Elite Pro - Waist Track</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -76,7 +76,16 @@
     </div>
 
     <div class="grid">
-        <div class="input-card"><label>Lépés</label><input type="number" id="steps" oninput="liveCalc()"></div>
+        <div class="input-card">
+            <label>Lépés</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="steps" oninput="liveCalc()">
+                <div id="waist-input-wrap" style="display:none; border-left: 1px solid var(--border); padding-left: 10px; min-width: 80px;">
+                    <label>Derék</label>
+                    <input type="number" id="waist_cm" step="0.1" placeholder="0">
+                </div>
+            </div>
+        </div>
         <div class="input-card">
             <span id="water-info" class="info-tag" style="text-decoration:none; cursor:default;">Víz: 0 / 3.5 L</span>
             <label>Liter</label>
@@ -181,11 +190,12 @@
     }
 
     async function loadDailyData() {
-        const date = document.getElementById('date').value;
-        if(!currentUser || !date) return;
+        const dateStr = document.getElementById('date').value;
+        if(!currentUser || !dateStr) return;
         try {
-            const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`);
+            const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${dateStr}.json`);
             currentDayData = await res.json() || {};
+            
             document.getElementById('weight').value = currentDayData.weight || '';
             document.getElementById('weight_evening').value = currentDayData.weight_evening || '';
             document.getElementById('steps').value = currentDayData.steps || '';
@@ -194,6 +204,21 @@
             document.getElementById('water-info').innerText = `Víz: ${currentDayData.water || 0} / ${wGoal} L`;
             document.getElementById('water-fill').style.width = Math.min(((currentDayData.water || 0) / wGoal) * 100, 100) + "%";
             
+            // HÉTFŐI DERÉK LOGIKA
+            const selDate = new Date(dateStr);
+            const isMonday = selDate.getDay() === 1; // 1 = Hétfő
+            const waistWrap = document.getElementById('waist-input-wrap');
+            
+            if (isMonday && !currentDayData.waist) {
+                waistWrap.style.display = 'block';
+                document.getElementById('waist_cm').value = '';
+            } else if (currentDayData.waist) {
+                waistWrap.style.display = 'block'; // Ha már van adat, mutassuk
+                document.getElementById('waist_cm').value = currentDayData.waist;
+            } else {
+                waistWrap.style.display = 'none';
+            }
+
             liveCalc();
             updateTotalDeficit();
         } catch (e) {}
@@ -241,10 +266,12 @@
         const addKcal = parseInt(document.getElementById('kcal').value) || 0;
         const sVal = document.getElementById('steps').value;
         const addWat = parseFloat(document.getElementById('water').value) || 0;
+        const waistVal = document.getElementById('waist_cm').value;
 
         if(wVal) up.weight = parseFloat(wVal);
         if(wEveVal) up.weight_evening = parseFloat(wEveVal);
         if(sVal) up.steps = parseInt(sVal);
+        if(waistVal) up.waist = parseFloat(waistVal);
         
         if(!up.kcal_list) up.kcal_list = [];
         if(addKcal > 0) {
@@ -378,8 +405,8 @@
     }
 
     async function exportToExcel() {
-        let csv = "\uFEFFDatum;Reggel;Este;Kcal;Lepes;Deficit;Viz\n";
-        fullHistory.forEach(h => csv += `${h.date};${h.weight||''};${h.weight_evening||''};${h.kcal_in||''};${h.steps||''};${h.deficit||''};${h.water||''}\n`);
+        let csv = "\uFEFFDatum;Reggel;Este;Kcal;Lepes;Deficit;Viz;Derek\n";
+        fullHistory.forEach(h => csv += `${h.date};${h.weight||''};${h.weight_evening||''};${h.kcal_in||''};${h.steps||''};${h.deficit||''};${h.water||''};${h.waist||''}\n`);
         const link = document.createElement("a");
         link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
         link.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
