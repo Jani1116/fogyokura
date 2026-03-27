@@ -103,7 +103,7 @@
         <div id="save-status"></div>
     </div>
     
-    <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">STATISZTIKA</button>
+    <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">STATISZTITIKA</button>
     <button onclick="logout()" style="background:none; border:none; color:var(--gray); width:100%; font-size:10px; margin-top: 25px;">Kijelentkezés</button>
 </div>
 
@@ -404,24 +404,39 @@
     }
 
     async function exportToExcel() {
-        let csv = "\uFEFFDatum,Reggel,Este,Kcal,Lepes,Deficit,Viz,Derek\n";
-        fullHistory.forEach(h => {
-            const row = [
-                h.date || '',
-                h.weight || '',
-                h.weight_evening || '',
-                h.kcal_in || '',
-                h.steps || '',
-                h.deficit || '',
-                h.water || '',
-                h.waist || ''
-            ];
-            csv += row.join(",") + "\n";
-        });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        link.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
-        link.click();
+        showLoading(true);
+        try {
+            // Közvetlenül az adatbázisból kérjük le a legfrissebb adatokat mentés előtt
+            const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
+            const data = await res.json();
+            if (!data) { alert("Nincs exportálható adat!"); showLoading(false); return; }
+            
+            // Rendezzük dátum szerint növekvő sorrendbe
+            const freshHistory = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            let csv = "\uFEFFDatum,Reggel,Este,Kcal,Lepes,Deficit,Viz,Derek\n";
+            freshHistory.forEach(h => {
+                const row = [
+                    h.date || '',
+                    h.weight || '',
+                    h.weight_evening || '',
+                    h.kcal_in || '',
+                    h.steps || '',
+                    h.deficit || '',
+                    h.water || '',
+                    h.waist || ''
+                ];
+                csv += row.join(",") + "\n";
+            });
+            
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            link.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        } catch (e) {
+            alert("Hiba az exportálás során!");
+        }
+        showLoading(false);
     }
 
     function logout() { localStorage.removeItem('diet_session'); location.reload(); }
