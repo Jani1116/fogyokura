@@ -204,16 +204,15 @@
             document.getElementById('water-info').innerText = `Víz: ${currentDayData.water || 0} / ${wGoal} L`;
             document.getElementById('water-fill').style.width = Math.min(((currentDayData.water || 0) / wGoal) * 100, 100) + "%";
             
-            // HÉTFŐI DERÉK LOGIKA
             const selDate = new Date(dateStr);
-            const isMonday = selDate.getDay() === 1; // 1 = Hétfő
+            const isMonday = selDate.getDay() === 1;
             const waistWrap = document.getElementById('waist-input-wrap');
             
             if (isMonday && !currentDayData.waist) {
                 waistWrap.style.display = 'block';
                 document.getElementById('waist_cm').value = '';
             } else if (currentDayData.waist) {
-                waistWrap.style.display = 'block'; // Ha már van adat, mutassuk
+                waistWrap.style.display = 'block'; 
                 document.getElementById('waist_cm').value = currentDayData.waist;
             } else {
                 waistWrap.style.display = 'none';
@@ -405,10 +404,22 @@
     }
 
     async function exportToExcel() {
-        let csv = "\uFEFFDatum;Reggel;Este;Kcal;Lepes;Deficit;Viz;Derek\n";
-        fullHistory.forEach(h => csv += `${h.date};${h.weight||''};${h.weight_evening||''};${h.kcal_in||''};${h.steps||''};${h.deficit||''};${h.water||''};${h.waist||''}\n`);
+        let csv = "\uFEFFDatum,Reggel,Este,Kcal,Lepes,Deficit,Viz,Derek\n";
+        fullHistory.forEach(h => {
+            const row = [
+                h.date || '',
+                h.weight || '',
+                h.weight_evening || '',
+                h.kcal_in || '',
+                h.steps || '',
+                h.deficit || '',
+                h.water || '',
+                h.waist || ''
+            ];
+            csv += row.join(",") + "\n";
+        });
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
         link.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
         link.click();
     }
