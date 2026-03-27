@@ -1,0 +1,15 @@
+{
+  "short_name": "Kalória",
+  "name": "Kalória Követő App",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2615/2615077.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
