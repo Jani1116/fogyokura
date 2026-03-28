@@ -1,16 +1,40 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-    <link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
-</script>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fogyókúra Elite Pro - Waist Track</title>
+    <link rel="manifest" href="manifest.json">
+    
+    <script>
+      // OKOS SERVICE WORKER REGISZTRÁCIÓ (AUTOMATIKUS FRISSÍTÉSSEL)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').then(reg => {
+            // Figyeljük, ha új verzió érkezik a GitHub-ról
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                // Ha az új SW települt, azonnal újratöltjük az oldalt
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  window.location.reload();
+                }
+              });
+            });
+          });
+        });
+
+        // Biztosítjuk, hogy a frissítés után az új verzió vegye át az irányítást
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            window.location.reload();
+            refreshing = true;
+          }
+        });
+      }
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -413,36 +437,20 @@
     async function exportToExcel() {
         showLoading(true);
         try {
-            // Közvetlenül az adatbázisból kérjük le a legfrissebb adatokat mentés előtt
             const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
             const data = await res.json();
             if (!data) { alert("Nincs exportálható adat!"); showLoading(false); return; }
-            
-            // Rendezzük dátum szerint növekvő sorrendbe
             const freshHistory = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
-
             let csv = "\uFEFFDatum,Reggel,Este,Kcal,Lepes,Deficit,Viz,Derek\n";
             freshHistory.forEach(h => {
-                const row = [
-                    h.date || '',
-                    h.weight || '',
-                    h.weight_evening || '',
-                    h.kcal_in || '',
-                    h.steps || '',
-                    h.deficit || '',
-                    h.water || '',
-                    h.waist || ''
-                ];
+                const row = [h.date || '', h.weight || '', h.weight_evening || '', h.kcal_in || '', h.steps || '', h.deficit || '', h.water || '', h.waist || ''];
                 csv += row.join(",") + "\n";
             });
-            
             const link = document.createElement("a");
             link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
             link.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
-        } catch (e) {
-            alert("Hiba az exportálás során!");
-        }
+        } catch (e) { alert("Hiba az exportálás során!"); }
         showLoading(false);
     }
 
