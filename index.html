@@ -178,7 +178,8 @@
         const yData = await resY.json();
         const yL2 = yData ? (yData.steps_l2 || 0) : 0;
 
-        const totalSteps = (l1 + l2) - yL2;
+        const totalSteps = Math.max(0, (l1 + l2) - yL2);
+
         document.getElementById('step-result').innerText = `Összesen: ${totalSteps} lépés`;
 
         if (weight > 0) {
