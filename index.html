@@ -3,38 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fogyókúra Elite Pro - Waist Track</title>
+    <title>Fogyókúra Elite Pro - Wake/Sleep Track</title>
     <link rel="manifest" href="manifest.json">
     
-    <script>
-      // OKOS SERVICE WORKER REGISZTRÁCIÓ (AUTOMATIKUS FRISSÍTÉSSEL)
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js').then(reg => {
-            // Figyeljük, ha új verzió érkezik a GitHub-ról
-            reg.addEventListener('updatefound', () => {
-              const newWorker = reg.installing;
-              newWorker.addEventListener('statechange', () => {
-                // Ha az új SW települt, azonnal újratöltjük az oldalt
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  window.location.reload();
-                }
-              });
-            });
-          });
-        });
-
-        // Biztosítjuk, hogy a frissítés után az új verzió vegye át az irányítást
-        let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!refreshing) {
-            window.location.reload();
-            refreshing = true;
-          }
-        });
-      }
-    </script>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -84,8 +55,8 @@
     <div id="user-display" style="font-size: 10px; color: var(--accent); text-align: center; margin-bottom: 10px; letter-spacing: 2px; font-weight: bold;"></div>
     <div class="input-card"><label>Dátum</label><input type="date" id="date"></div>
     <div class="grid">
-        <div class="input-card"><label>Reggeli (kg)</label><input type="number" id="weight" step="0.1" oninput="liveCalc()"></div>
-        <div class="input-card"><label>Esti (kg)</label><input type="number" id="weight_evening" step="0.1"></div>
+        <div class="input-card"><label>Ébredési (kg)</label><input type="number" id="weight" step="0.1" oninput="liveCalc()"></div>
+        <div class="input-card"><label>Lefekvési (kg)</label><input type="number" id="weight_evening" step="0.1"></div>
     </div>
     
     <div class="input-card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -134,7 +105,7 @@
         <div id="save-status"></div>
     </div>
     
-    <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">STATISZTITIKA</button>
+    <button class="main-btn" style="background:rgba(255,255,255,0.1)" onclick="openCharts()">STATISZTIKA</button>
     <button onclick="logout()" style="background:none; border:none; color:var(--gray); width:100%; font-size:10px; margin-top: 25px;">Kijelentkezés</button>
 </div>
 
@@ -155,8 +126,8 @@
             <button class="view-btn" id="btn-all" onclick="changeView('all')">ÖSSZES</button>
         </div>
         <div class="toggle-grid">
-            <label class="toggle-item"><input type="checkbox" id="t-morning" checked onchange="updateChartWithData()"> Reggel</label>
-            <label class="toggle-item"><input type="checkbox" id="t-evening" onchange="updateChartWithData()"> Este</label>
+            <label class="toggle-item"><input type="checkbox" id="t-morning" checked onchange="updateChartWithData()"> Ébredési</label>
+            <label class="toggle-item"><input type="checkbox" id="t-evening" onchange="updateChartWithData()"> Lefekvési</label>
             <label class="toggle-item"><input type="checkbox" id="t-trend" checked onchange="updateChartWithData()"> Trend</label>
             <label class="toggle-item"><input type="checkbox" id="t-steps" onchange="updateChartWithData()"> Lépés</label>
             <label class="toggle-item"><input type="checkbox" id="t-water" onchange="updateChartWithData()"> Víz</label>
@@ -174,6 +145,7 @@
 </div>
 
 <script>
+    // Konfiguráció és változók maradnak a régiek a kompatibilitás miatt
     const USER_HEIGHT = 170;
     const BIRTH_DATE = new Date('1985-11-16');
     const DB_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.com/";
@@ -227,6 +199,7 @@
             const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${dateStr}.json`);
             currentDayData = await res.json() || {};
             
+            // Logikailag: weight = Ébredési, weight_evening = Lefekvési
             document.getElementById('weight').value = currentDayData.weight || '';
             document.getElementById('weight_evening').value = currentDayData.weight_evening || '';
             document.getElementById('steps').value = currentDayData.steps || '';
@@ -407,8 +380,8 @@
         });
 
         const datasets = [];
-        if(document.getElementById('t-morning').checked) datasets.push({ type: 'line', label: 'Reggel', data: filtered.map(h => h.weight), borderColor: '#0a84ff', yAxisID: 'y' });
-        if(document.getElementById('t-evening').checked) datasets.push({ type: 'line', label: 'Este', data: filtered.map(h => h.weight_evening), borderColor: '#5e5ce6', borderDash:[5,5], yAxisID: 'y' });
+        if(document.getElementById('t-morning').checked) datasets.push({ type: 'line', label: 'Ébredési', data: filtered.map(h => h.weight), borderColor: '#0a84ff', yAxisID: 'y' });
+        if(document.getElementById('t-evening').checked) datasets.push({ type: 'line', label: 'Lefekvési', data: filtered.map(h => h.weight_evening), borderColor: '#5e5ce6', borderDash:[5,5], yAxisID: 'y' });
         if(document.getElementById('t-trend').checked) datasets.push({ type: 'line', label: 'Trend', data: trendData, borderColor: '#ff9f0a', borderWidth: 3, yAxisID: 'y' });
         if(document.getElementById('t-steps').checked) datasets.push({ type: 'bar', label: 'Lépés', data: filtered.map(h => h.steps), backgroundColor: 'rgba(255,255,255,0.1)', yAxisID: 'ySteps' });
         if(document.getElementById('t-water').checked) datasets.push({ type: 'bar', label: 'Víz', data: filtered.map(h => h.water), backgroundColor: 'rgba(0,122,255,0.2)', yAxisID: 'yWater' });
@@ -441,14 +414,15 @@
             const data = await res.json();
             if (!data) { alert("Nincs exportálható adat!"); showLoading(false); return; }
             const freshHistory = Object.values(data).sort((a,b) => new Date(a.date) - new Date(b.date));
-            let csv = "\uFEFFDatum,Reggel,Este,Kcal,Lepes,Deficit,Viz,Derek\n";
+            // Fejléc átírva magyarra és az új logikára
+            let csv = "\uFEFFDatum,Ebredesi,Lefekvesi,Kcal,Lepes,Deficit,Viz,Derek\n";
             freshHistory.forEach(h => {
                 const row = [h.date || '', h.weight || '', h.weight_evening || '', h.kcal_in || '', h.steps || '', h.deficit || '', h.water || '', h.waist || ''];
                 csv += row.join(",") + "\n";
             });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-            link.download = `export_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `diet_export_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
         } catch (e) { alert("Hiba az exportálás során!"); }
         showLoading(false);
