@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fogyókúra Elite Pro - Shift Fix</title>
+    <title>Fogyókúra Elite Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -19,8 +19,9 @@
         label { display: block; font-size: 11px; color: var(--gray); text-transform: uppercase; margin-bottom: 4px; }
         input { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; box-sizing: border-box; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .quick-btns { display: flex; gap: 8px; margin-top: 8px; }
+        .q-btn { flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: white; font-size: 12px; cursor: pointer; }
         .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 18px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
-        .info-tag { font-size: 12px; color: var(--accent); font-weight: bold; margin-bottom: 8px; display: block; cursor: pointer; text-decoration: underline; }
         .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 8px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--water); width: 0%; transition: 0.3s; }
         .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 100; padding: 20px; overflow-y: auto; }
@@ -28,7 +29,6 @@
         .view-btn { flex: 1; border: none; background: none; color: var(--gray); padding: 10px; font-size: 11px; font-weight: bold; border-radius: 8px; }
         .view-btn.active { background: var(--accent); color: white; }
         #loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; color: var(--accent); font-weight: bold; }
-        .log-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -61,16 +61,21 @@
     </div>
 
     <div class="input-card">
-        <span id="kcal-info" class="info-tag" onclick="showKcalLog()">Mai eddigi: 0 kcal</span>
-        <label>Új bevitel (+)</label>
+        <label>Új bevitel (Kcal)</label>
         <input type="number" id="kcal" oninput="liveCalc()">
+        <div class="quick-btns">
+            <button class="q-btn" onclick="addVal('kcal', 100)">+100</button>
+            <button class="q-btn" onclick="addVal('kcal', 500)">+500</button>
+        </div>
     </div>
 
     <div class="grid">
         <div class="input-card">
-            <span id="water-info" class="info-tag" style="text-decoration:none;">Víz: 0 / 3.5 L</span>
-            <label>Liter</label>
+            <label id="water-label">Víz: 0 L</label>
             <input type="number" id="water" step="0.1">
+            <div class="quick-btns">
+                <button class="q-btn" onclick="addVal('water', 0.5)">+0.5L</button>
+            </div>
             <div class="progress-bar"><div id="water-fill" class="progress-fill"></div></div>
         </div>
         <div class="input-card">
@@ -86,18 +91,16 @@
 
 <div id="chart-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-        <h2 id="modal-title" style="margin:0; font-size: 18px;">Haladás</h2>
+        <h2 style="margin:0; font-size: 18px;">Haladás</h2>
         <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:28px">✕</button>
     </div>
-    <div id="kcal-log-view" style="display:none;"><div id="kcal-log-list"></div></div>
-    <div id="stats-view">
-        <div class="view-selector">
-            <button class="view-btn active" id="btn-7" onclick="changeView('7')">7 NAP</button>
-            <button class="view-btn" id="btn-all" onclick="changeView('all')">ÖSSZES</button>
-        </div>
-        <canvas id="weightChart"></canvas>
-        <div id="summary" style="margin-top:15px; padding:15px; background:rgba(255,255,255,0.05); border-radius:15px;"></div>
+    <div class="view-selector">
+        <button class="view-btn active" id="btn-7" onclick="changeChartView('7')">7 NAP</button>
+        <button class="view-btn" id="btn-all" onclick="changeChartView('all')">ÖSSZES</button>
     </div>
+    <canvas id="weightChart"></canvas>
+    <div id="summary" style="margin-top:15px; padding:15px; background:rgba(255,255,255,0.05); border-radius:15px; font-size: 13px;"></div>
+    <button class="main-btn" style="background:var(--success); margin-top:15px;" onclick="exportCSV()">CSV EXPORT</button>
 </div>
 
 <script>
@@ -106,8 +109,15 @@
     let currentUser = JSON.parse(localStorage.getItem('diet_session'));
     let currentDayData = {};
     let fullHistory = [];
+    let currentRange = '7';
 
     document.getElementById('date').valueAsDate = new Date();
+
+    function addVal(id, val) { 
+        let el = document.getElementById(id);
+        el.value = (parseFloat(el.value) || 0) + val;
+        liveCalc();
+    }
 
     function showLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
 
@@ -141,23 +151,15 @@
         try {
             const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${dateStr}.json`);
             currentDayData = await res.json() || {};
-            
             document.getElementById('weight').value = currentDayData.weight || '';
             document.getElementById('weight_evening').value = currentDayData.weight_evening || '';
-            
-            // KOMPATIBILITÁS: Ha nincs L1/L2, a régi 'steps'-et az L1-be rakjuk
             document.getElementById('steps_l1').value = currentDayData.steps_l1 || currentDayData.steps || '';
             document.getElementById('steps_l2').value = currentDayData.steps_l2 || '';
             
-            document.getElementById('kcal-info').innerText = `Mai eddigi: ${currentDayData.kcal_in || 0} kcal`;
-            
-            // VÍZ BETÖLTÉSE
             const wGoal = currentDayData.weight ? (currentDayData.weight * 0.035).toFixed(1) : 3.5;
             const currentWater = currentDayData.water || 0;
-            document.getElementById('water-info').innerText = `Víz: ${currentWater} / ${wGoal} L`;
+            document.getElementById('water-label').innerText = `Víz: ${currentWater} / ${wGoal} L`;
             document.getElementById('water-fill').style.width = Math.min((currentWater / wGoal) * 100, 100) + "%";
-            document.getElementById('water').value = '';
-
             liveCalc();
         } catch (e) {}
     }
@@ -167,19 +169,15 @@
         const l1 = parseInt(document.getElementById('steps_l1').value) || 0;
         const l2 = parseInt(document.getElementById('steps_l2').value) || 0;
         const weight = parseFloat(document.getElementById('weight').value) || 0;
-        const addKcal = parseInt(document.getElementById('kcal').value) || 0;
-        const kcalIn = (currentDayData.kcal_in || 0) + addKcal;
+        const kcalIn = (currentDayData.kcal_in || 0) + (parseInt(document.getElementById('kcal').value) || 0);
 
-        // Tegnapi L2 levonása a kijelzőhöz
-        const d = new Date(dateStr);
-        d.setDate(d.getDate() - 1);
+        const d = new Date(dateStr); d.setDate(d.getDate() - 1);
         const yStr = d.toISOString().split('T')[0];
         const resY = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${yStr}.json`);
         const yData = await resY.json();
         const yL2 = yData ? (yData.steps_l2 || 0) : 0;
 
         const totalSteps = Math.max(0, (l1 + l2) - yL2);
-
         document.getElementById('step-result').innerText = `Összesen: ${totalSteps} lépés`;
 
         if (weight > 0) {
@@ -187,56 +185,27 @@
             const bmr = (10 * weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
             const stepBurn = totalSteps * (weight * 0.00045);
             const deficit = Math.round((bmr + stepBurn) - kcalIn);
-            const defDisp = document.getElementById('daily-def-display');
-            defDisp.innerText = `${deficit} kcal`;
-            defDisp.style.color = deficit > 0 ? 'var(--success)' : 'var(--danger)';
+            const disp = document.getElementById('daily-def-display');
+            disp.innerText = `${deficit} kcal`;
+            disp.style.color = deficit > 0 ? 'var(--success)' : 'var(--danger)';
         }
     }
 
     async function saveData() {
-        const date = document.getElementById('date').value;
         showLoading(true);
-        
+        const date = document.getElementById('date').value;
         const l1 = parseInt(document.getElementById('steps_l1').value) || 0;
         const l2 = parseInt(document.getElementById('steps_l2').value) || 0;
         const addKcal = parseInt(document.getElementById('kcal').value) || 0;
         const addWat = parseFloat(document.getElementById('water').value) || 0;
         const weight = parseFloat(document.getElementById('weight').value);
 
-        const d = new Date(date);
-        d.setDate(d.getDate() - 1);
-        const yStr = d.toISOString().split('T')[0];
-        const resY = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${yStr}.json`);
-        const yData = await resY.json();
-        const yL2 = yData ? (yData.steps_l2 || 0) : 0;
-
-        const finalSteps = (l1 + l2) - yL2;
-        
-        let up = { 
-            ...currentDayData, 
-            date: date,
-            weight: weight,
-            weight_evening: parseFloat(document.getElementById('weight_evening').value),
-            steps: finalSteps,
-            steps_l1: l1,
-            steps_l2: l2,
-            water: (currentDayData.water || 0) + addWat
-        };
-
+        let up = { ...currentDayData, date, weight, weight_evening: parseFloat(document.getElementById('weight_evening').value), steps_l1: l1, steps_l2: l2, water: (currentDayData.water || 0) + addWat };
         if(!up.kcal_list) up.kcal_list = [];
-        if(addKcal > 0) {
-            up.kcal_list.push(addKcal);
-            up.kcal_in = up.kcal_list.reduce((a, b) => a + b, 0);
-        }
+        if(addKcal > 0) up.kcal_list.push(addKcal);
+        up.kcal_in = up.kcal_list.reduce((a, b) => a + b, 0);
 
-        let age = new Date().getFullYear() - 1985;
-        const bmr = (10 * weight) + (6.25 * USER_HEIGHT) - (5 * age) + 5;
-        const stepBurn = finalSteps * (weight * 0.00045);
-        up.deficit = Math.round((bmr + stepBurn) - (up.kcal_in || 0));
-
-        await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { 
-            method: 'PATCH', body: JSON.stringify(up) 
-        });
+        await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { method: 'PATCH', body: JSON.stringify(up) });
         document.getElementById('kcal').value = '';
         document.getElementById('water').value = '';
         await loadDailyData();
@@ -245,9 +214,6 @@
     }
 
     async function openCharts() {
-        document.getElementById('modal-title').innerText = "Haladás";
-        document.getElementById('kcal-log-view').style.display = 'none';
-        document.getElementById('stats-view').style.display = 'block';
         document.getElementById('chart-modal').style.display = 'block';
         showLoading(true);
         const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
@@ -257,26 +223,59 @@
         showLoading(false);
     }
 
+    function changeChartView(range) {
+        currentRange = range;
+        document.getElementById('btn-7').classList.toggle('active', range === '7');
+        document.getElementById('btn-all').classList.toggle('active', range === 'all');
+        updateChart();
+    }
+
     function updateChart() {
-        const data = fullHistory.slice(-7);
+        const data = currentRange === '7' ? fullHistory.slice(-7) : fullHistory;
         const ctx = document.getElementById('weightChart').getContext('2d');
+        const weights = data.map(h => h.weight).filter(w => w > 0);
+        
+        // Trendvonal számítás (egyszerű lineáris regresszió)
+        const trendData = [];
+        if(weights.length > 1) {
+            const n = weights.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+            for(let i=0; i<n; i++) {
+                sumX += i; sumY += weights[i];
+                sumXY += i * weights[i]; sumXX += i * i;
+            }
+            const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+            for(let i=0; i<n; i++) trendData.push(slope * i + intercept);
+        }
+
         if(window.myChart) window.myChart.destroy();
         window.myChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data.map(h => h.date.slice(5)),
-                datasets: [{
-                    label: 'Súly (kg)',
-                    data: data.map(h => h.weight),
-                    borderColor: '#0a84ff',
-                    tension: 0.3,
-                    fill: false
-                }]
+                datasets: [
+                    { label: 'Súly', data: weights, borderColor: '#0a84ff', tension: 0.3 },
+                    { label: 'Trend', data: trendData, borderColor: '#ff9f0a', borderDash: [5,5], pointRadius: 0 }
+                ]
             },
             options: { scales: { y: { beginAtZero: false, ticks: { color: '#8e8e93' } } } }
         });
+
         const totalDef = data.reduce((a, b) => a + (b.deficit || 0), 0);
-        document.getElementById('summary').innerHTML = `<b>7 napos összes deficit: ${totalDef} kcal</b><br>Várható fogyás: ${(totalDef/7700).toFixed(2)} kg`;
+        document.getElementById('summary').innerHTML = `<b>Deficit: ${totalDef} kcal</b> | <b>Várható: ${(totalDef/7700).toFixed(2)} kg</b>`;
+    }
+
+    function exportCSV() {
+        let csv = "Datum,Suly,Lépés,Víz,Kcal_Be,Deficit\n";
+        fullHistory.forEach(h => {
+            csv += `${h.date},${h.weight || 0},${h.steps || 0},${h.water || 0},${h.kcal_in || 0},${h.deficit || 0}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `diet_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
     }
 
     function closeModal() { document.getElementById('chart-modal').style.display = 'none'; }
