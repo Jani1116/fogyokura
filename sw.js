@@ -1,4 +1,4 @@
-const CACHE_NAME = 'diet-elite-v6'; // Ha nagyot változtatsz, írd át v7-re
+const CACHE_NAME = 'diet-elite-v7'; // Ha nagyot változtatsz, írd át v8-re
 const ASSETS = [
   './index.html',
   './manifest.json',
