@@ -1,4 +1,4 @@
-const CACHE_NAME = 'diet-elite-v11'; // Verziószám növelve
+const CACHE_NAME = 'diet-elite-v12'; // Verziószám növelve
 const ASSETS = [
   './',
   './index.html',
