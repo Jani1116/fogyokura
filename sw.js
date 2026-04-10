@@ -1,4 +1,4 @@
-const CACHE_NAME = 'diet-v13';
+const CACHE_NAME = 'diet-v12';
 const ASSETS = ['./', './index.html', './manifest.json', 'https://cdn.jsdelivr.net/npm/chart.js'];
 
 self.addEventListener('install', (e) => {
