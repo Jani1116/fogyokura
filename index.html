@@ -16,74 +16,83 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         .container { max-width: 500px; margin: auto; background: var(--glass); backdrop-filter: blur(15px); padding: 15px; border-radius: 25px; border: 1px solid var(--border); min-height: 95vh; display: flex; flex-direction: column; }
         
-        #missing-data-alert { background: rgba(255, 214, 10, 0.15); color: var(--warning); padding: 12px; border-radius: 12px; margin-bottom: 12px; font-size: 11px; display: none; align-items: center; cursor: pointer; border: 1px solid rgba(255, 214, 10, 0.3); }
-
         h1 { font-size: 20px; text-align: center; margin: 10px 0; color: var(--accent); letter-spacing: 1.5px; font-weight: 900; }
         .input-card { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 18px; margin-bottom: 10px; border: 1px solid var(--border); }
         label { display: block; font-size: 10px; color: var(--gray); text-transform: uppercase; margin-bottom: 5px; font-weight: 600; }
         input { width: 100%; background: none; border: none; color: white; font-size: 18px; font-weight: 600; outline: none; }
         
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 18px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 5px; transition: opacity 0.2s; }
+        .main-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 15px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
         .main-btn:active { opacity: 0.7; }
         
-        .list-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; padding: 30px 20px; }
-        .list-item { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid var(--border); align-items: center; }
-        .del-btn { color: var(--danger); font-weight: bold; padding: 8px; font-size: 12px; }
-
-        .chart-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
-        .chk-label { font-size: 11px; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.07); padding: 10px; border-radius: 12px; border: 1px solid var(--border); }
+        .del-x { background: none; border: none; color: var(--danger); font-size: 20px; font-weight: bold; cursor: pointer; padding: 0 10px; }
         
         .modal { display: none; position: fixed; inset: 0; background: #000; z-index: 1000; padding: 15px; overflow-y: auto; }
         #loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; color: var(--accent); font-weight: bold; }
+        
+        .list-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; padding: 30px 20px; }
+        .list-item { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid var(--border); align-items: center; }
     </style>
 </head>
 <body>
 
-<div id="loading-overlay">ADATOK SZINKRONIZÁLÁSA...</div>
+<div id="loading-overlay">ADATOK...</div>
 
 <div id="login-screen" class="container" style="justify-content: center;">
     <h1>FOGYÓKÚRA ELITE</h1>
-    <div class="input-card"><label>Felhasználónév</label><input type="text" id="login-user" spellcheck="false" autocomplete="username"></div>
-    <div class="input-card"><label>Jelszó</label><input type="password" id="login-pass" autocomplete="current-password"></div>
+    <div class="input-card"><label>Felhasználónév</label><input type="text" id="login-user" spellcheck="false"></div>
+    <div class="input-card"><label>Jelszó</label><input type="password" id="login-pass"></div>
     <button class="main-btn" onclick="handleLogin()">BELÉPÉS</button>
 </div>
 
 <div id="app-content" class="container" style="display:none;">
-    <div id="missing-data-alert" onclick="jumpToMissingDay()">⚠️ Hiányzó súlyadat: <span id="missing-dates"></span></div>
-    
     <div id="user-display" style="font-size: 9px; color: var(--accent); text-align: center; letter-spacing: 3px; margin-bottom: 5px; font-weight: bold;"></div>
-    <div class="input-card"><label>Dátum</label><input type="date" id="date" onchange="loadDailyData()"></div>
+    
+    <div class="input-card">
+        <label>Dátum</label>
+        <input type="date" id="date" onchange="loadDailyData()">
+    </div>
     
     <div class="grid">
-        <div class="input-card"><label>Ébredési (kg)</label><input type="number" id="weight" step="0.1" inputmode="decimal" oninput="liveCalc()"></div>
-        <div class="input-card"><label>Lefekvési (kg)</label><input type="number" id="weight_evening" step="0.1" inputmode="decimal"></div>
+        <div class="input-card">
+            <label>Ébredési (kg)</label>
+            <div style="display:flex;"><input type="number" id="weight" step="0.1" inputmode="decimal" oninput="liveCalc()"><button class="del-x" onclick="clearField('weight')">✕</button></div>
+        </div>
+        <div class="input-card">
+            <label>Lefekvési (kg)</label>
+            <div style="display:flex;"><input type="number" id="weight_evening" step="0.1" inputmode="decimal"><button class="del-x" onclick="clearField('weight_evening')">✕</button></div>
+        </div>
     </div>
 
-    <div class="input-card" id="waist-card" style="display:none; border: 1px solid var(--accent);">
-        <label style="color: var(--accent);">Hétfői derékbőség (cm)</label>
-        <input type="number" id="waist" step="0.1" inputmode="decimal">
-    </div>
-    
     <div class="input-card">
         <label>Lépések (L1: Éjfélig | L2: Éjfél után)</label>
         <div class="grid">
             <input type="number" id="steps_l1" placeholder="L1" inputmode="numeric" oninput="liveCalc()">
             <input type="number" id="steps_l2" placeholder="L2" inputmode="numeric" oninput="liveCalc()">
         </div>
-        <div id="step-result" style="margin-top: 8px; font-size: 13px; font-weight: 800; color: var(--success);">0 Lépés</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+            <div id="step-result" style="font-weight: 800; color: var(--success);">0 Lépés</div>
+            <button onclick="clearSteps()" style="background:none; border:none; color:var(--danger); font-size:11px; font-weight:bold;">TÖRLÉS</button>
+        </div>
     </div>
 
-    <div class="grid">
-        <div class="input-card" onclick="showEditList('kcal')" style="cursor:pointer">
-            <label>Bevitel (kcal) 🔍</label>
-            <div id="kcal-total" style="font-size: 18px; font-weight: 700;">0</div>
-            <input type="number" id="kcal_add" placeholder="+ Hozzáad" inputmode="numeric" style="font-size: 14px; margin-top: 5px; color: var(--gray);" oninput="liveCalc()" onclick="event.stopPropagation()">
+    <div class="input-card">
+        <label onclick="showEditList('kcal')" style="cursor:pointer">Bevitel: <span id="kcal-total">0</span> kcal 🔍</label>
+        <input type="number" id="kcal_add" placeholder="+ Hozzáad" inputmode="numeric" oninput="liveCalc()">
+        <div style="display: flex; gap: 5px; margin-top: 10px;">
+            <button class="main-btn" style="background:rgba(255,255,255,0.1);" onclick="quickAdd('kcal_add', 100)">+100</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.1);" onclick="quickAdd('kcal_add', 500)">+500</button>
+            <button class="main-btn" style="width:50px; background:var(--danger);" onclick="clearField('kcal_add')">✕</button>
         </div>
-        <div class="input-card" onclick="showEditList('water')" style="cursor:pointer">
-            <label>Víz (L) 🔍</label>
-            <div id="water-total" style="font-size: 18px; font-weight: 700;">0</div>
-            <input type="number" id="water_add" step="0.1" placeholder="+ Hozzáad" inputmode="decimal" style="font-size: 14px; margin-top: 5px; color: var(--gray);" onclick="event.stopPropagation()">
+    </div>
+
+    <div class="input-card">
+        <label onclick="showEditList('water')" style="cursor:pointer">Víz: <span id="water-total">0</span> L 🔍</label>
+        <input type="number" id="water_add" step="0.1" placeholder="+ Hozzáad" inputmode="decimal">
+        <div style="display: flex; gap: 5px; margin-top: 10px;">
+            <button class="main-btn" style="background:var(--water);" onclick="quickAdd('water_add', 0.3)">+3dl</button>
+            <button class="main-btn" style="background:var(--water);" onclick="quickAdd('water_add', 0.5)">+5dl</button>
+            <button class="main-btn" style="width:50px; background:var(--danger);" onclick="clearField('water_add')">✕</button>
         </div>
     </div>
 
@@ -92,56 +101,32 @@
         <div id="daily-def-display" style="font-weight: 900; font-size: 26px; color: var(--success);">0 kcal</div>
     </div>
 
-    <button class="main-btn" onclick="saveData()">MENTÉS</button>
-    <button class="main-btn" style="background:rgba(255,255,255,0.08);" onclick="openCharts()">STATISZTIKA</button>
-    <button onclick="logout()" style="background:none; border:none; color:var(--gray); width:100%; font-size:10px; margin-top: 20px; letter-spacing: 1px;">KIJELENTKEZÉS</button>
+    <button class="main-btn" onclick="saveData()" style="background:var(--success); margin-bottom:10px;">MENTÉS</button>
+    <button class="main-btn" onclick="openCharts()" style="background:rgba(255,255,255,0.08);">STATISZTIKA</button>
+    <button onclick="logout()" style="background:none; border:none; color:var(--gray); width:100%; font-size:10px; margin-top:20px;">KIJELENTKEZÉS</button>
 </div>
 
 <div id="list-overlay" class="list-overlay">
-    <h2 id="list-title" style="margin-top:0; color:var(--accent)"></h2>
-    <div id="list-content" style="max-height: 60vh; overflow-y: auto; margin-bottom: 20px; background: rgba(255,255,255,0.03); border-radius: 15px;"></div>
-    <button class="main-btn" onclick="closeList()">BEZÁRÁS</button>
+    <h2 id="list-title" style="color:var(--accent)"></h2>
+    <div id="list-content"></div>
+    <button class="main-btn" onclick="closeList()" style="margin-top:20px;">BEZÁRÁS</button>
 </div>
 
 <div id="chart-modal" class="modal">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-        <h2 style="margin:0">Haladás</h2>
-        <button onclick="closeChart()" style="background:none; border:none; color:white; font-size:35px; line-height: 1;">✕</button>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Statisztika</h2>
+        <button onclick="closeChart()" style="background:none; border:none; color:white; font-size:30px;">✕</button>
     </div>
-
-    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <button id="range-7" class="main-btn" style="margin:0; padding:10px; font-size:11px;" onclick="changeRange(7)">UTOLSÓ 7 NAP</button>
-        <button id="range-all" class="main-btn" style="margin:0; padding:10px; font-size:11px; background:rgba(255,255,255,0.1);" onclick="changeRange(0)">ÖSSZES ADAT</button>
-    </div>
-    
-    <div class="chart-controls">
-        <label class="chk-label"><input type="checkbox" id="chk-weight" checked onchange="updateChart()"> Súly + Trend</label>
-        <label class="chk-label"><input type="checkbox" id="chk-weight-ev" onchange="updateChart()"> Esti Súly</label>
-        <label class="chk-label"><input type="checkbox" id="chk-steps" onchange="updateChart()"> Lépés</label>
-        <label class="chk-label"><input type="checkbox" id="chk-water" onchange="updateChart()"> Víz</label>
-        <label class="chk-label"><input type="checkbox" id="chk-def" onchange="updateChart()"> Deficit</label>
-        <label class="chk-label"><input type="checkbox" id="chk-kcal" onchange="updateChart()"> Kcal Be</label>
-    </div>
-
-    <div style="background: rgba(255,255,255,0.03); border-radius: 20px; padding: 10px; border: 1px solid var(--border); height: 300px;">
-        <canvas id="mainChart"></canvas>
-    </div>
-    <div id="summary-box" style="margin-top:15px; padding:18px; background:rgba(10, 132, 255, 0.1); border-radius:20px; border: 1px solid var(--accent);"></div>
-    <button class="main-btn" style="background: var(--success); margin-top: 15px;" onclick="exportCSV()">CSV EXPORT</button>
+    <canvas id="mainChart" style="max-height: 300px;"></canvas>
+    <div id="summary-box" style="margin-top:20px; padding:15px; background:rgba(10,132,255,0.1); border-radius:15px;"></div>
 </div>
 
 <script>
-    // Service Worker regisztráció a PWA funkcióhoz
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
-
     const DB_URL = "https://kiadaskoveto-2e474-default-rtdb.firebaseio.com/";
     let currentUser = JSON.parse(localStorage.getItem('diet_session'));
     let currentDayData = { kcal_list: [], water_list: [] };
-    let missingDays = [];
     let myChart = null;
-    let currentRangeDays = 7;
 
-    // Kezdő dátum beállítása
     document.getElementById('date').valueAsDate = new Date();
 
     function showLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
@@ -158,8 +143,8 @@
                 currentUser = { name: u };
                 localStorage.setItem('diet_session', JSON.stringify(currentUser));
                 initApp();
-            } else alert("Hibás belépési adatok!");
-        } catch (e) { alert("Hálózati hiba!"); }
+            } else alert("Hiba!");
+        } catch (e) { alert("Hiba!"); }
         showLoading(false);
     }
 
@@ -167,40 +152,11 @@
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-content').style.display = 'flex';
         document.getElementById('user-display').innerText = currentUser.name.toUpperCase();
-        checkMissingData();
         loadDailyData();
-    }
-
-    async function checkMissingData() {
-        const today = new Date();
-        missingDays = [];
-        for(let i=1; i<=3; i++) {
-            let d = new Date(); d.setDate(today.getDate() - i);
-            let dStr = d.toISOString().split('T')[0];
-            const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${dStr}.json`);
-            const data = await res.json();
-            if(!data || !data.weight) missingDays.push(dStr);
-        }
-        const alertBox = document.getElementById('missing-data-alert');
-        if(missingDays.length > 0) {
-            alertBox.style.display = 'flex';
-            document.getElementById('missing-dates').innerText = missingDays.join(', ');
-        } else alertBox.style.display = 'none';
-    }
-
-    function jumpToMissingDay() {
-        if(missingDays.length > 0) {
-            document.getElementById('date').value = missingDays[0];
-            loadDailyData();
-        }
     }
 
     async function loadDailyData() {
         const dateStr = document.getElementById('date').value;
-        const d = new Date(dateStr);
-        // Hétfő ellenőrzése a derékbőséghez
-        document.getElementById('waist-card').style.display = (d.getDay() === 1) ? 'block' : 'none';
-
         showLoading(true);
         try {
             const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${dateStr}.json`);
@@ -210,216 +166,84 @@
 
             document.getElementById('weight').value = currentDayData.weight || '';
             document.getElementById('weight_evening').value = currentDayData.weight_evening || '';
-            document.getElementById('waist').value = currentDayData.waist || '';
             document.getElementById('steps_l1').value = currentDayData.steps_l1 || '';
             document.getElementById('steps_l2').value = currentDayData.steps_l2 || '';
             
             refreshTotals();
             liveCalc();
-        } catch(e) { console.error(e); }
+        } catch(e) {}
         showLoading(false);
     }
 
     function refreshTotals() {
-        const kSum = currentDayData.kcal_list.reduce((a, b) => a + b, 0);
-        const wSum = currentDayData.water_list.reduce((a, b) => a + b, 0);
-        document.getElementById('kcal-total').innerText = kSum;
-        document.getElementById('water-total').innerText = wSum.toFixed(1);
+        document.getElementById('kcal-total').innerText = currentDayData.kcal_list.reduce((a,b)=>a+b,0);
+        document.getElementById('water-total').innerText = currentDayData.water_list.reduce((a,b)=>a+b,0).toFixed(1);
     }
 
-    async function liveCalc() {
+    function liveCalc() {
         const weight = parseFloat(document.getElementById('weight').value) || 0;
         const l1 = parseInt(document.getElementById('steps_l1').value) || 0;
         const l2 = parseInt(document.getElementById('steps_l2').value) || 0;
-        const dateStr = document.getElementById('date').value;
-        
-        // Tegnapi L2 lekérése
-        const d = new Date(dateStr); d.setDate(d.getDate() - 1);
-        const resY = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${d.toISOString().split('T')[0]}.json`);
-        const yData = await resY.json();
-        const yL2 = yData ? (yData.steps_l2 || 0) : 0;
-
-        const totalSteps = Math.max(0, (l1 + l2) - yL2);
+        const totalSteps = l1 + l2;
         document.getElementById('step-result').innerText = `${totalSteps.toLocaleString()} Lépés`;
 
         if(weight > 0) {
             const age = new Date().getFullYear() - 1985;
             const bmr = (10 * weight) + (6.25 * 170) - (5 * age) + 5;
             const burn = totalSteps * (weight * 0.00045);
-            const currentTotal = currentDayData.kcal_list.reduce((a,b)=>a+b,0);
-            const addNow = parseInt(document.getElementById('kcal_add').value) || 0;
-            const def = Math.round((bmr + burn) - (currentTotal + addNow));
+            const cin = currentDayData.kcal_list.reduce((a,b)=>a+b,0) + (parseInt(document.getElementById('kcal_add').value) || 0);
+            const def = Math.round((bmr + burn) - cin);
             const disp = document.getElementById('daily-def-display');
             disp.innerText = `${def} kcal`;
             disp.style.color = def > 0 ? 'var(--success)' : 'var(--danger)';
         }
     }
 
+    function quickAdd(id, val) {
+        const el = document.getElementById(id);
+        el.value = (parseFloat(el.value || 0) + val).toFixed(id === 'water_add' ? 1 : 0);
+        liveCalc();
+    }
+
+    function clearField(id) { document.getElementById(id).value = ''; liveCalc(); }
+    function clearSteps() { document.getElementById('steps_l1').value = ''; document.getElementById('steps_l2').value = ''; liveCalc(); }
+
     async function saveData() {
         showLoading(true);
         const date = document.getElementById('date').value;
         const kAdd = parseInt(document.getElementById('kcal_add').value) || 0;
         const wAdd = parseFloat(document.getElementById('water_add').value) || 0;
-
         if(kAdd > 0) currentDayData.kcal_list.push(kAdd);
         if(wAdd > 0) currentDayData.water_list.push(wAdd);
 
-        const weight = parseFloat(document.getElementById('weight').value);
+        const weight = parseFloat(document.getElementById('weight').value) || 0;
         const l1 = parseInt(document.getElementById('steps_l1').value) || 0;
         const l2 = parseInt(document.getElementById('steps_l2').value) || 0;
-        
-        const d = new Date(date); d.setDate(d.getDate() - 1);
-        const resY = await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${d.toISOString().split('T')[0]}.json`);
-        const yData = await resY.json();
-        const totalSteps = Math.max(0, (l1 + l2) - (yData?.steps_l2 || 0));
-
+        const totalSteps = l1 + l2;
         const cin = currentDayData.kcal_list.reduce((a,b)=>a+b,0);
         const bmr = (10 * weight) + (6.25 * 170) - (5 * (new Date().getFullYear()-1985)) + 5;
         const def = Math.round((bmr + (totalSteps * weight * 0.00045)) - cin);
 
-        const up = {
-            ...currentDayData,
-            date,
-            weight,
-            weight_evening: parseFloat(document.getElementById('weight_evening').value),
-            waist: parseFloat(document.getElementById('waist').value),
-            steps_l1: l1, steps_l2: l2, steps: totalSteps,
-            kcal_in: cin, deficit: def,
-            water: parseFloat(currentDayData.water_list.reduce((a,b)=>a+b,0).toFixed(1))
-        };
-
-        try {
-            await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { 
-                method: 'PATCH', 
-                body: JSON.stringify(up) 
-            });
-            document.getElementById('kcal_add').value = '';
-            document.getElementById('water_add').value = '';
-            await loadDailyData();
-            checkMissingData();
-        } catch(e) { alert("Sikertelen mentés!"); }
+        const up = { ...currentDayData, date, weight, weight_evening: parseFloat(document.getElementById('weight_evening').value)||0, steps_l1: l1, steps_l2: l2, steps: totalSteps, kcal_in: cin, deficit: def, water: parseFloat(currentDayData.water_list.reduce((a,b)=>a+b,0).toFixed(1)) };
+        await fetch(`${DB_URL}diet_tracker/${currentUser.name}/${date}.json`, { method: 'PATCH', body: JSON.stringify(up) });
+        document.getElementById('kcal_add').value = ''; document.getElementById('water_add').value = '';
+        await loadDailyData();
         showLoading(false);
     }
 
     function showEditList(type) {
         const list = type === 'kcal' ? currentDayData.kcal_list : currentDayData.water_list;
-        document.getElementById('list-title').innerText = type === 'kcal' ? 'Bevitt kalóriák' : 'Vízadagok';
-        let html = '';
-        list.forEach((val, i) => {
-            html += `<div class="list-item"><span>${val} ${type==='kcal'?'kcal':'L'}</span><span class="del-btn" onclick="removeItem('${type}', ${i})">TÖRLÉS</span></div>`;
-        });
-        document.getElementById('list-content').innerHTML = html || '<p style="color:var(--gray); text-align:center; padding:20px;">Nincs rögzített adat.</p>';
+        document.getElementById('list-title').innerText = type === 'kcal' ? 'Kalória' : 'Víz';
+        document.getElementById('list-content').innerHTML = list.map((v,i) => `<div class="list-item"><span>${v}</span><button onclick="removeItem('${type}',${i})" style="color:var(--danger); background:none; border:none;">TÖRLÉS</button></div>`).join('');
         document.getElementById('list-overlay').style.display = 'block';
     }
 
-    async function removeItem(type, idx) {
-        if(type === 'kcal') currentDayData.kcal_list.splice(idx, 1);
-        else currentDayData.water_list.splice(idx, 1);
-        await saveData();
-        showEditList(type);
+    async function removeItem(type, i) {
+        if(type==='kcal') currentDayData.kcal_list.splice(i,1); else currentDayData.water_list.splice(i,1);
+        await saveData(); showEditList(type);
     }
     function closeList() { document.getElementById('list-overlay').style.display = 'none'; }
-
-    async function openCharts() {
-        document.getElementById('chart-modal').style.display = 'block';
-        showLoading(true);
-        try {
-            const res = await fetch(`${DB_URL}diet_tracker/${currentUser.name}.json`);
-            const raw = await res.json();
-            window.chartFullData = Object.values(raw).sort((a,b) => new Date(a.date) - new Date(b.date));
-            updateChart();
-        } catch(e) { console.error(e); }
-        showLoading(false);
-    }
-
-    function changeRange(days) {
-        currentRangeDays = days;
-        document.getElementById('range-7').style.background = days === 7 ? 'var(--accent)' : 'rgba(255,255,255,0.1)';
-        document.getElementById('range-all').style.background = days === 0 ? 'var(--accent)' : 'rgba(255,255,255,0.1)';
-        updateChart();
-    }
-
-    function updateChart() {
-        const data = currentRangeDays === 0 ? window.chartFullData : window.chartFullData.slice(-currentRangeDays);
-        const labels = data.map(d => d.date.slice(5));
-        const datasets = [];
-        
-        if(document.getElementById('chk-weight').checked) {
-            datasets.push({ 
-                label: 'Súly', data: data.map(d => d.weight), 
-                borderColor: '#0a84ff', yAxisID: 'y', tension: 0.1, pointRadius: 4 
-            });
-            // 5 napos mozgóátlag a trendhez
-            const movingAvg = data.map((d, i, arr) => {
-                const slice = arr.slice(Math.max(0, i-4), i+1).filter(x => x.weight > 0);
-                return slice.length ? (slice.reduce((a,b)=>a+b.weight,0) / slice.length) : null;
-            });
-            datasets.push({ 
-                label: 'Trend', data: movingAvg, borderColor: '#ff9f0a', 
-                borderWidth: 3, pointRadius: 0, tension: 0.4 
-            });
-        }
-        
-        if(document.getElementById('chk-weight-ev').checked) {
-            datasets.push({ label: 'Esti', data: data.map(d => d.weight_evening), borderColor: '#5856d6', borderDash: [5,5], yAxisID: 'y', pointRadius: 2 });
-        }
-
-        if(document.getElementById('chk-steps').checked) {
-            datasets.push({ label: 'Lépés', data: data.map(d => d.steps), backgroundColor: 'rgba(48, 209, 88, 0.1)', type: 'bar', yAxisID: 'y1' });
-        }
-
-        if(document.getElementById('chk-water').checked) {
-            datasets.push({ label: 'Víz', data: data.map(d => d.water), borderColor: '#007aff', yAxisID: 'y2', tension: 0.3 });
-        }
-
-        if(document.getElementById('chk-def').checked) {
-            datasets.push({ label: 'Deficit', data: data.map(d => d.deficit), borderColor: '#30d158', yAxisID: 'y1', tension: 0.3 });
-        }
-
-        if(document.getElementById('chk-kcal').checked) {
-            datasets.push({ label: 'Kcal', data: data.map(d => d.kcal_in), borderColor: '#ff453a', yAxisID: 'y1', tension: 0.3 });
-        }
-
-        if(myChart) myChart.destroy();
-        myChart = new Chart(document.getElementById('mainChart'), {
-            type: 'line',
-            data: { labels, datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8e8e93' } },
-                    y1: { position: 'right', display: false },
-                    y2: { position: 'right', display: false }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        const totalDef = data.reduce((a, b) => a + (b.deficit || 0), 0);
-        document.getElementById('summary-box').innerHTML = `
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:center;">
-                <div><small style="color:var(--gray)">IDŐSZAKI ÖSSZ DEFICIT</small><br><b style="font-size:18px">${totalDef.toLocaleString()} kcal</b></div>
-                <div><small style="color:var(--gray)">VÁRHATÓ FOGYÁS</small><br><b style="font-size:18px">${(totalDef/7700).toFixed(2)} kg</b></div>
-            </div>`;
-    }
-
-    function exportCSV() {
-        let csv = "\uFEFFDátum,Súly,Esti Súly,Lépés,Víz,Kcal_Be,Deficit,Derék\n";
-        window.chartFullData.forEach(h => {
-            csv += `${h.date},${h.weight || ''},${h.weight_evening || ''},${h.steps || 0},${h.water || 0},${h.kcal_in || 0},${h.deficit || 0},${h.waist || ''}\n`;
-        });
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `diet_export_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-    }
-
-    function closeChart() { document.getElementById('chart-modal').style.display = 'none'; }
     function logout() { localStorage.removeItem('diet_session'); location.reload(); }
-    
-    // Automatikus belépés ha van session
     if(currentUser) initApp();
 </script>
 </body>
