@@ -1,4 +1,4 @@
-const CACHE_NAME = 'diet-v13';
+const CACHE_NAME = 'diet-v14';
 const ASSETS = [
   './', 
   './index.html', 
@@ -25,8 +25,8 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // A Firebase adatokat soha ne cache-elje a Service Worker, mert azok változnak
-  if (e.request.url.includes('firebaseio.com')) {
+  // Firebase API hívások és dinamikus adatok kihagyása a cache-ből
+  if (e.request.url.includes('firebaseio.com') || e.request.method !== 'GET') {
     return fetch(e.request);
   }
   
