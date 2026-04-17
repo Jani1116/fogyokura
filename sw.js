@@ -1,9 +1,8 @@
-const CACHE_NAME = 'diet-v1';
+const CACHE_NAME = 'diet-v2';
 const ASSETS = [
   './', 
   './index.html', 
-  './manifest.json', 
-  'https://cdn.jsdelivr.net/npm/chart.js'
+  './manifest.json'
 ];
 
 self.addEventListener('install', (e) => {
@@ -25,11 +24,10 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Firebase API hívások és dinamikus adatok kihagyása a cache-ből
+  // Firebase API hívások kihagyása a cache-ből a friss adatok miatt
   if (e.request.url.includes('firebaseio.com') || e.request.method !== 'GET') {
     return fetch(e.request);
   }
-  
   e.respondWith(
     caches.match(e.request).then(res => {
       return res || fetch(e.request);
