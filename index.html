@@ -34,6 +34,7 @@
         .delta-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); }
         .nav-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; z-index: 100; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: none; flex-direction: column; padding: 40px 20px; overflow-y: auto; }
+        canvas { max-width: 100%; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -160,7 +161,6 @@
         const dateStr = document.getElementById('date').value;
         const idx = dates.indexOf(dateStr);
 
-        // Napi delta
         const deltaEl = document.getElementById('weight-delta');
         if (idx > 0 && allHistory[dates[idx-1]].weight && currentDayData.weight) {
             const diff = (currentDayData.weight - allHistory[dates[idx-1]].weight).toFixed(1);
@@ -168,7 +168,6 @@
             deltaEl.style.color = diff > 0 ? "var(--danger)" : "var(--success)";
         } else { deltaEl.innerText = "--"; }
 
-        // Heti változás (Hétfőtől számolva)
         const mon = new Date(d);
         mon.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1));
         const monStr = mon.toISOString().split('T')[0];
@@ -191,7 +190,6 @@
         let l1 = parseInt(document.getElementById('steps_l1').value) || 0;
         const l2 = parseInt(document.getElementById('steps_l2').value) || 0;
 
-        // Lépés korrekció éjszakás műszak után
         if (idx > 0) {
             const prevL2 = allHistory[dates[idx-1]].steps_l2 || 0;
             l1 = Math.max(0, l1 - prevL2);
@@ -264,6 +262,8 @@
     function showList(type) {
         const modal = document.getElementById('list-modal');
         const content = document.getElementById('modal-content');
+        const title = document.getElementById('modal-title');
+        title.innerText = type === 'kcal' ? "KALÓRIA LISTA" : "VÍZ LISTA";
         content.innerHTML = '';
         const list = type === 'kcal' ? currentDayData.kcal_list : currentDayData.water_list;
         list.forEach((val, i) => {
@@ -280,12 +280,82 @@
         closeModal(); refreshTotals(); liveCalc();
     }
 
-    function closeModal() { document.getElementById('list-modal').style.display = 'none'; }
-    function toggleSettings(s) { document.getElementById('settings-modal').style.display = s?'flex':'none'; }
+    function closeModal() { 
+        document.getElementById('list-modal').style.display = 'none'; 
+    }
+
+    function toggleSettings(s) { 
+        if(s) {
+            document.getElementById('set-dob').value = userSettings.dob;
+            document.getElementById('set-height').value = userSettings.height;
+            document.getElementById('set-gender').value = userSettings.gender;
+        }
+        document.getElementById('settings-modal').style.display = s?'flex':'none'; 
+    }
+
     function saveSettings() {
-        userSettings = { dob: document.getElementById('set-dob').value, height: parseInt(document.getElementById('set-height').value), gender: document.getElementById('set-gender').value };
+        userSettings = { 
+            dob: document.getElementById('set-dob').value, 
+            height: parseInt(document.getElementById('set-height').value), 
+            gender: document.getElementById('set-gender').value 
+        };
         localStorage.setItem('user_settings', JSON.stringify(userSettings));
         toggleSettings(false); liveCalc();
+    }
+
+    // --- STATISZTIKA FUNKCIÓK ---
+    function toggleStats(show) {
+        const modal = document.getElementById('list-modal');
+        const content = document.getElementById('modal-content');
+        const title = document.getElementById('modal-title');
+        
+        if(show) {
+            title.innerText = "SÚLYGRAFIKON (7 NAP)";
+            content.innerHTML = '<canvas id="weightChart" height="300"></canvas>';
+            modal.style.display = 'flex';
+            setTimeout(renderChart, 100);
+        } else {
+            modal.style.display = 'none';
+        }
+    }
+
+    function renderChart() {
+        const canvas = document.getElementById('weightChart');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dates = Object.keys(allHistory).sort().slice(-7);
+        const weights = dates.map(d => allHistory[d].weight || null);
+
+        if (weights.filter(w => w !== null).length < 2) {
+            document.getElementById('modal-content').innerHTML = "<p style='text-align:center; color:var(--gray); padding:40px;'>Nincs elég adat a grafikonhoz (min. 2 nap súlyadat kell).</p>";
+            return;
+        }
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates.map(d => d.split('-').slice(1).join('.')),
+                datasets: [{
+                    data: weights,
+                    borderColor: '#0a84ff',
+                    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#0a84ff',
+                    pointRadius: 6,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#8e8e93' } },
+                    x: { grid: { display: false }, ticks: { color: '#8e8e93' } }
+                }
+            }
+        });
     }
     
     window.onfocus = loadDailyData;
