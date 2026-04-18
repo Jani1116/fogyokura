@@ -13,7 +13,7 @@
             --bg: #000000; --glass: rgba(28, 28, 30, 0.9);
             --border: rgba(255, 255, 255, 0.1); --accent: #0a84ff;
             --text: #ffffff; --success: #30d158; --gray: #8e8e93; --danger: #ff453a;
-            --water: #007aff;
+            --water: #007aff; --trend: #ff9500; --waist: #bf5af2;
         }
         body { 
             font-family: -apple-system, system-ui, sans-serif; 
@@ -29,12 +29,18 @@
         input, select { width: 100%; background: none; border: none; color: white; font-size: 20px; font-weight: 600; outline: none; padding: 5px 0; }
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .main-btn { border: none; padding: 16px; border-radius: 15px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; width: 100%; }
-        .quick-btn { background: rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 12px; border: none; font-weight: 600; flex: 1; font-size: 12px; }
+        .quick-btn { background: rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 12px; border: none; font-weight: 600; flex: 1; font-size: 12px; cursor: pointer; }
         #daily-def-display { font-size: 32px; font-weight: 900; text-align: center; margin-top: 10px; min-height: 40px; }
         .delta-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); }
         .nav-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; z-index: 100; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: none; flex-direction: column; padding: 40px 20px; overflow-y: auto; }
-        canvas { max-width: 100%; margin-top: 20px; }
+        
+        /* Statisztika specifikus stílusok */
+        .stat-controls { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
+        .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; font-size: 12px; }
+        .check-grid label { display: flex; align-items: center; gap: 8px; text-transform: none; color: white; font-size: 13px; }
+        .check-grid input { width: auto; }
+        .chart-container { height: 350px; position: relative; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -117,7 +123,7 @@
 <div id="list-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <h2 id="modal-title" style="margin:0;">LISTA</h2>
-        <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:30px;">✕</button>
+        <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:30px; cursor:pointer;">✕</button>
     </div>
     <div id="modal-content" style="margin-top:20px;"></div>
 </div>
@@ -130,6 +136,7 @@
     let currentDayData = { kcal_list: [], water_list: [] };
     let allHistory = {};
     let userSettings = JSON.parse(localStorage.getItem('user_settings')) || { dob: '1985-11-16', height: 180, gender: 'male' };
+    let myChart = null;
 
     document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
@@ -186,7 +193,6 @@
         const dateStr = document.getElementById('date').value;
         const dates = Object.keys(allHistory).sort();
         const idx = dates.indexOf(dateStr);
-        
         let l1 = parseInt(document.getElementById('steps_l1').value) || 0;
         const l2 = parseInt(document.getElementById('steps_l2').value) || 0;
 
@@ -241,7 +247,6 @@
             btn.style.background = "var(--gray)";
             btn.disabled = true;
             setTimeout(() => { btn.innerText = "MENTÉS"; btn.style.background = "var(--success)"; btn.disabled = false; }, 3000);
-            
             document.getElementById('kcal_add').value = '';
             document.getElementById('water_add').value = '';
             loadDailyData();
@@ -303,59 +308,165 @@
         toggleSettings(false); liveCalc();
     }
 
-    // --- STATISZTIKA FUNKCIÓK ---
+    // --- ANALITIKA ÉS EXPORT ---
     function toggleStats(show) {
         const modal = document.getElementById('list-modal');
         const content = document.getElementById('modal-content');
         const title = document.getElementById('modal-title');
         
         if(show) {
-            title.innerText = "SÚLYGRAFIKON (7 NAP)";
-            content.innerHTML = '<canvas id="weightChart" height="300"></canvas>';
+            title.innerText = "ELITE ANALYTICS";
+            content.innerHTML = `
+                <div class="stat-controls">
+                    <button class="quick-btn" onclick="renderChart('7')">7 nap</button>
+                    <button class="quick-btn" onclick="renderChart('30')">Hónap</button>
+                    <button class="quick-btn" onclick="renderChart('all')">Összes</button>
+                    <button class="quick-btn" style="background:var(--success)" onclick="exportCSV()">Export</button>
+                </div>
+                <div class="check-grid">
+                    <label><input type="checkbox" id="chk-weight" checked onchange="updateChartVisibility()"> Súly</label>
+                    <label><input type="checkbox" id="chk-trend" checked onchange="updateChartVisibility()"> Trend</label>
+                    <label><input type="checkbox" id="chk-steps" onchange="updateChartVisibility()"> Lépés</label>
+                    <label><input type="checkbox" id="chk-def" onchange="updateChartVisibility()"> Deficit</label>
+                    <label><input type="checkbox" id="chk-water" onchange="updateChartVisibility()"> Víz</label>
+                    <label><input type="checkbox" id="chk-waist" onchange="updateChartVisibility()"> Derék</label>
+                </div>
+                <div class="chart-container">
+                    <canvas id="weightChart"></canvas>
+                </div>
+            `;
             modal.style.display = 'flex';
-            setTimeout(renderChart, 100);
+            setTimeout(() => renderChart('7'), 100);
         } else {
             modal.style.display = 'none';
         }
     }
 
-    function renderChart() {
+    function renderChart(range) {
         const canvas = document.getElementById('weightChart');
         if(!canvas) return;
         const ctx = canvas.getContext('2d');
-        const dates = Object.keys(allHistory).sort().slice(-7);
-        const weights = dates.map(d => allHistory[d].weight || null);
+        if(myChart) myChart.destroy();
 
-        if (weights.filter(w => w !== null).length < 2) {
-            document.getElementById('modal-content').innerHTML = "<p style='text-align:center; color:var(--gray); padding:40px;'>Nincs elég adat a grafikonhoz (min. 2 nap súlyadat kell).</p>";
-            return;
-        }
+        let dates = Object.keys(allHistory).sort();
+        if(range === '7') dates = dates.slice(-7);
+        else if(range === '30') dates = dates.slice(-30);
 
-        new Chart(ctx, {
-            type: 'line',
+        // Segédfüggvény deficit számításhoz a grafikonon
+        const getDeficit = (d) => {
+            const day = allHistory[d];
+            if(!day.weight) return 0;
+            const birth = new Date(userSettings.dob);
+            const dDate = new Date(d);
+            let age = dDate.getFullYear() - birth.getFullYear();
+            const bmr = (10 * day.weight) + (6.25 * userSettings.height) - (5 * age) + (userSettings.gender === 'male' ? 5 : -161);
+            const burn = ((day.steps_l1 || 0) + (day.steps_l2 || 0)) * (day.weight * 0.00045);
+            return Math.round((bmr + burn) - (day.kcal_in || 0));
+        };
+
+        const weightData = dates.map(d => allHistory[d].weight || null);
+        const trendData = weightData.map((v, i, arr) => {
+            const slice = arr.slice(Math.max(0, i - 4), i + 1).filter(n => n !== null);
+            return slice.length ? (slice.reduce((a, b) => a + b) / slice.length).toFixed(1) : null;
+        });
+
+        const datasets = [
+            {
+                label: 'Súly',
+                data: weightData,
+                borderColor: '#0a84ff',
+                backgroundColor: 'rgba(10, 132, 255, 0.1)',
+                yAxisID: 'y-weight',
+                type: 'line',
+                hidden: !document.getElementById('chk-weight').checked,
+                tension: 0.4, fill: true, pointRadius: range === 'all' ? 0 : 4
+            },
+            {
+                label: 'Trend',
+                data: trendData,
+                borderColor: '#ff9500',
+                borderDash: [5, 5],
+                yAxisID: 'y-weight',
+                type: 'line',
+                hidden: !document.getElementById('chk-trend').checked,
+                pointRadius: 0, fill: false
+            },
+            {
+                label: 'Lépés',
+                data: dates.map(d => (allHistory[d].steps_l1 || 0) + (allHistory[d].steps_l2 || 0)),
+                backgroundColor: '#30d158',
+                yAxisID: 'y-steps',
+                type: 'bar',
+                hidden: !document.getElementById('chk-steps').checked
+            },
+            {
+                label: 'Deficit',
+                data: dates.map(d => getDeficit(d)),
+                backgroundColor: '#ff453a',
+                yAxisID: 'y-def',
+                type: 'bar',
+                hidden: !document.getElementById('chk-def').checked
+            },
+            {
+                label: 'Víz',
+                data: dates.map(d => allHistory[d].water || 0),
+                backgroundColor: '#007aff',
+                yAxisID: 'y-water',
+                type: 'bar',
+                hidden: !document.getElementById('chk-water').checked
+            },
+            {
+                label: 'Derék',
+                data: dates.map(d => allHistory[d].waist || null),
+                borderColor: '#bf5af2',
+                yAxisID: 'y-waist',
+                type: 'line',
+                hidden: !document.getElementById('chk-waist').checked,
+                pointRadius: 4
+            }
+        ];
+
+        myChart = new Chart(ctx, {
             data: {
                 labels: dates.map(d => d.split('-').slice(1).join('.')),
-                datasets: [{
-                    data: weights,
-                    borderColor: '#0a84ff',
-                    backgroundColor: 'rgba(10, 132, 255, 0.1)',
-                    borderWidth: 3,
-                    pointBackgroundColor: '#0a84ff',
-                    pointRadius: 6,
-                    tension: 0.4,
-                    fill: true
-                }]
+                datasets: datasets
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#8e8e93' } },
-                    x: { grid: { display: false }, ticks: { color: '#8e8e93' } }
+                    x: { grid: { display: false }, ticks: { color: '#8e8e93', font: { size: 10 } } },
+                    'y-weight': { display: false },
+                    'y-steps': { display: false },
+                    'y-def': { display: false },
+                    'y-water': { display: false },
+                    'y-waist': { display: false }
                 }
             }
         });
+    }
+
+    function updateChartVisibility() {
+        if(!myChart) return;
+        const ids = ['chk-weight', 'chk-trend', 'chk-steps', 'chk-def', 'chk-water', 'chk-waist'];
+        ids.forEach((id, index) => {
+            myChart.setDatasetVisibility(index, document.getElementById(id).checked);
+        });
+        myChart.update();
+    }
+
+    function exportCSV() {
+        let csv = "\uFEFFDatum,Suly(kg),Derek(cm),Lepes_Nappal,Lepes_Ejjel,Kcal_Bevitel,Viz(L)\n";
+        Object.keys(allHistory).sort().forEach(d => {
+            const day = allHistory[d];
+            csv += `${d},${day.weight || ''},${day.waist || ''},${day.steps_l1 || 0},${day.steps_l2 || 0},${day.kcal_in || 0},${day.water || 0}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `elite_tracker_export_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
     }
     
     window.onfocus = loadDailyData;
