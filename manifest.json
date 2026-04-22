@@ -6,13 +6,23 @@
     {
       "src": "1774606671886.png",
       "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "1774606671886.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "1774606671886.png",
+      "type": "image/png",
       "sizes": "1024x1024",
       "purpose": "any maskable"
     }
   ],
-  "start_url": "./index.html",
+  "start_url": "/fogyokura/index.html",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait",
   "theme_color": "#000000",
   "background_color": "#000000"
 }
