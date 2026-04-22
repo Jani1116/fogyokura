@@ -12,7 +12,11 @@
   ],
   "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "theme_color": "#000000",
   "background_color": "#000000"
 }
+
+
+
+ így jó lesz
