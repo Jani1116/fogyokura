@@ -41,6 +41,9 @@
         .check-grid label { display: flex; align-items: center; gap: 8px; text-transform: none; color: white; font-size: 13px; margin-bottom: 0; }
         .check-grid input { width: 18px; height: 18px; }
         .chart-container { height: 320px; position: relative; margin-top: 10px; background: rgba(255,255,255,0.03); border-radius: 15px; padding: 10px; }
+
+        /* Ellenőrző sáv stílusa */
+        #missing-data-alert { display: none; background: rgba(255, 149, 0, 0.15); border: 1px solid var(--trend); border-radius: 12px; padding: 10px; margin-bottom: 10px; font-size: 13px; color: var(--trend); cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
@@ -49,6 +52,10 @@
     <div class="header-row">
         <h1>ELITE TRACKER</h1>
         <button onclick="toggleSettings(true)" style="background:none; border:none; font-size:22px; cursor:pointer;">⚙️</button>
+    </div>
+
+    <div id="missing-data-alert" onclick="goToMissingDay()">
+        ⚠️ <span id="missing-days-text">Hiányzó adatok: ...</span>
     </div>
     
     <div class="card">
@@ -73,14 +80,13 @@
     </div>
 
     <div class="card">
-    <label>Lépések</label>
-    <div class="btn-grid">
-        <input type="number" id="steps_l1" placeholder="L1 (éjfélig)" inputmode="numeric" oninput="liveCalc()">
-        <input type="number" id="steps_l2" placeholder="L2 (éjfél utáni)" inputmode="numeric" oninput="liveCalc()">
+        <label>Lépések</label>
+        <div class="btn-grid">
+            <input type="number" id="steps_l1" placeholder="L1 (éjfélig)" inputmode="numeric" oninput="liveCalc()">
+            <input type="number" id="steps_l2" placeholder="L2 (éjfél utáni)" inputmode="numeric" oninput="liveCalc()">
+        </div>
+        <div id="step-display" style="text-align:center; font-weight:800; color:var(--success); margin-top:8px; font-size:18px;">0 Lépés</div>
     </div>
-    <div id="step-display" style="text-align:center; font-weight:800; color:var(--success); margin-top:8px; font-size:18px;">0 Lépés</div>
-</div>
-
 
     <div class="card">
         <label onclick="showList('kcal')" style="cursor:pointer">Kalória (Bevitt: <span id="kcal-total">0</span>)</label>
@@ -138,6 +144,7 @@
     let allHistory = {};
     let userSettings = JSON.parse(localStorage.getItem('user_settings')) || { dob: '1985-11-16', height: 180, gender: 'male' };
     let myChart = null;
+    let firstMissingDay = null;
 
     document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
@@ -158,6 +165,7 @@
             
             updateUI();
             liveCalc();
+            checkRecentHistory();
         } catch(e) { console.error("Hiba a betöltésnél", e); }
     }
 
@@ -190,13 +198,11 @@
         refreshTotals();
     }
 
-    // --- EZ A RÉSZ VÁLTOZOTT ---
     function liveCalc() {
         const dateStr = document.getElementById('date').value;
         const l1 = parseInt(document.getElementById('steps_l1').value) || 0;
         const l2 = parseInt(document.getElementById('steps_l2').value) || 0;
         
-        // Előző napi L2 megkeresése a memóriából
         const dates = Object.keys(allHistory).sort();
         const currentIdx = dates.indexOf(dateStr);
         let prevL2 = 0;
@@ -206,14 +212,7 @@
             prevL2 = parseInt(prevDayData.steps_l2) || 0;
         }
 
-        // Logika: (Aktuális L1 - Előző L2) + Aktuális L2
-        let actualSteps = 0;
-        if (l1 > 0) {
-            actualSteps = (l1 - prevL2) + l2;
-        } else {
-            actualSteps = l2;
-        }
-        
+        let actualSteps = l1 > 0 ? (l1 - prevL2) + l2 : l2;
         actualSteps = Math.max(0, actualSteps);
         document.getElementById('step-display').innerText = `${actualSteps.toLocaleString()} Lépés`;
 
@@ -231,7 +230,41 @@
             disp.style.color = def > 0 ? 'var(--success)' : 'var(--danger)';
         }
     }
-    // --- VÁLTOZÁSOK VÉGE ---
+
+    function checkRecentHistory() {
+        const alertBox = document.getElementById('missing-data-alert');
+        const textEl = document.getElementById('missing-days-text');
+        const today = new Date();
+        let missingDays = [];
+        firstMissingDay = null;
+
+        for (let i = 1; i <= 5; i++) {
+            let d = new Date();
+            d.setDate(today.getDate() - i);
+            let dStr = d.toISOString().split('T')[0];
+            const data = allHistory[dStr];
+            
+            if (!data || !data.weight || !data.steps_l1 || (data.kcal_in === 0 && (!data.kcal_list || data.kcal_list.length === 0))) {
+                missingDays.push(dStr.split('-').slice(1).join('.'));
+                if (!firstMissingDay) firstMissingDay = dStr;
+            }
+        }
+
+        if (missingDays.length > 0) {
+            alertBox.style.display = 'block';
+            textEl.innerText = `Hiányzó napok: ${missingDays.join(', ')}`;
+        } else {
+            alertBox.style.display = 'none';
+        }
+    }
+
+    function goToMissingDay() {
+        if (firstMissingDay) {
+            document.getElementById('date').value = firstMissingDay;
+            loadDailyData();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
 
     async function saveData() {
         const btn = document.getElementById('save-btn');
@@ -360,15 +393,12 @@
             const dDate = new Date(d);
             let age = dDate.getFullYear() - birth.getFullYear();
             const bmr = (10 * day.weight) + (6.25 * userSettings.height) - (5 * age) + (userSettings.gender === 'male' ? 5 : -161);
-            
-            // Deficithez is az új logikát kell használni a grafikonon
             const datesArr = Object.keys(allHistory).sort();
             const idx = datesArr.indexOf(d);
             let pL2 = (idx > 0) ? (allHistory[datesArr[idx-1]].steps_l2 || 0) : 0;
             let sL1 = day.steps_l1 || 0;
             let sL2 = day.steps_l2 || 0;
             let calcSteps = sL1 > 0 ? (sL1 - pL2) + sL2 : sL2;
-            
             const burn = Math.max(0, calcSteps) * (day.weight * 0.00045);
             return Math.round((bmr + burn) - (day.kcal_in || 0));
         };
