@@ -1,4 +1,4 @@
-const CACHE_NAME = 'diet-v100';
+const CACHE_NAME = 'diet-v200';
 const ASSETS = [
   './', 
   './index.html', 
