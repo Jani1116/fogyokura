@@ -73,13 +73,14 @@
     </div>
 
     <div class="card">
-        <label>Lépések</label>
-        <div class="btn-grid">
-            <input type="number" id="steps_l2" placeholder="L2 (éjfél utáni)" inputmode="numeric" oninput="liveCalc()">
-            <input type="number" id="steps_l1" placeholder="L1 (éjfélig)" inputmode="numeric" oninput="liveCalc()">
-        </div>
-        <div id="step-display" style="text-align:center; font-weight:800; color:var(--success); margin-top:8px; font-size:18px;">0 Lépés</div>
+    <label>Lépések</label>
+    <div class="btn-grid">
+        <input type="number" id="steps_l1" placeholder="L1 (éjfélig)" inputmode="numeric" oninput="liveCalc()">
+        <input type="number" id="steps_l2" placeholder="L2 (éjfél utáni)" inputmode="numeric" oninput="liveCalc()">
     </div>
+    <div id="step-display" style="text-align:center; font-weight:800; color:var(--success); margin-top:8px; font-size:18px;">0 Lépés</div>
+</div>
+
 
     <div class="card">
         <label onclick="showList('kcal')" style="cursor:pointer">Kalória (Bevitt: <span id="kcal-total">0</span>)</label>
