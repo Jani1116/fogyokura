@@ -95,6 +95,7 @@
             <button class="quick-btn" onclick="quickAdd('kcal_add', 100)">+100</button>
             <button class="quick-btn" onclick="quickAdd('kcal_add', 500)">+500</button>
         </div>
+        <div id="kcal-center-display" onclick="showList('kcal')" style="text-align:center; font-weight:800; color:var(--trend); margin-top:8px; font-size:18px; cursor:pointer;">0 kcal</div>
     </div>
 
     <div class="card">
@@ -104,6 +105,7 @@
             <button class="quick-btn" style="color:var(--water)" onclick="quickAdd('water_add', 0.3)">+3dl</button>
             <button class="quick-btn" style="color:var(--water)" onclick="quickAdd('water_add', 0.5)">+5dl</button>
         </div>
+        <div id="water-center-display" onclick="showList('water')" style="text-align:center; font-weight:800; color:var(--water); margin-top:8px; font-size:18px; cursor:pointer;">0.0 L</div>
     </div>
 
     <div id="daily-def-display">0 kcal</div>
@@ -302,8 +304,12 @@
     }
 
     function refreshTotals() {
-        document.getElementById('kcal-total').innerText = currentDayData.kcal_list.reduce((a,b)=>a+b,0);
-        document.getElementById('water-total').innerText = (currentDayData.water_list.reduce((a,b)=>a+b,0)).toFixed(1);
+        const kTot = currentDayData.kcal_list.reduce((a,b)=>a+b,0);
+        const wTot = currentDayData.water_list.reduce((a,b)=>a+b,0).toFixed(1);
+        document.getElementById('kcal-total').innerText = kTot;
+        document.getElementById('water-total').innerText = wTot;
+        document.getElementById('kcal-center-display').innerText = `${kTot} kcal`;
+        document.getElementById('water-center-display').innerText = `${wTot} L`;
     }
 
     function showList(type) {
